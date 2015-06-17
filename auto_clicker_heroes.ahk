@@ -1,5 +1,5 @@
 #Persistent
-SetTitleMatchMode 2
+SetTitleMatchMode 3 ; 1 - must start with, 2 - can contain anywhere, 3 - must exactly match
 winName=Clicker Heroes
 
 zzz = 300 ; sleep delay (in ms) after a click
