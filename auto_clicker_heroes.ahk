@@ -3,24 +3,77 @@ SetTitleMatchMode 3 ; 1 - must start with, 2 - can contain anywhere, 3 - must ex
 winName=Clicker Heroes
 
 zzz = 300 ; sleep delay (in ms) after a click
+exitThread = 0
 
-; Coordinates taken from the Steam client, in windowed mode, using Window Spy's relative mouse position
+; -----------------------------------------------------------------------------------------
+; Configuration
+; -----------------------------------------------------------------------------------------
 
-; Top LVL UP button (center) coordinates
-x = 100
-y = 285
-o = 107 ; offset to next button
+; Use Windows Spy or click Alt+MiddleMouseButton to tune the below (relative) coordinates:
+
+; Top LVL UP button when scrolled to the bottom
+xLvl = 100
+yLvl = 285
+
+yLvlInit = 273 ; adjusted y position used during the init run
+
+oLvl = 107 ; offset to next lvl up button
+
+; Up and down arrows
+xScroll = 555
+yUp = 220
+yDown = 650
+
+; Buy Available Upgrades button
+xBuy = 300
+yBuy = 580
+
+; Ascension button
+ascDownClicks = 24 ; # of down clicks needed to spot the button after a speed run
+xAsc = 310
+yAsc = 591
+
+; Ascend Yes button
+xYes = 500
+yYes = 445
+
+; No smart image recognition, so we click'em all!
+get_clickables()
+{
+    clicky(524, 487)
+    clicky(747, 431)
+    clicky(755, 480)
+    clicky(760, 380)
+    clicky(873, 512)
+    clicky(1005, 453)
+    clicky(1053, 443)
+
+    sleep 10000 ; wait 10s to pick up all coins
+}
+
+; Important! Configure your gilded heroes in the speed_run() function.
+
+; -----------------------------------------------------------------------------------------
+; Hotkeys
+; -----------------------------------------------------------------------------------------
+
+; Show the cursor position with Alt+MiddleMouseButton
+!mbutton::
+	mousegetpos, xpos, ypos
+	msgbox, Cursor position: x%xpos% y%ypos%
+return
 
 ; Script pause toggle
 Pause::Pause
 return
 
+; Script abort
 !Pause::
-	global exitThread = 1
-	show_splash("Run aborted!")
+	show_splash("Aborting...", 5, 0)
+	exitThread = 1
 return
 
-; Alt+F1 to F3 are here for testing purposes before running the full speed run loop (Ctrl+F1)
+; Alt+F1 to F3 are here for testing purposes before running the full speed run loop
 
 !F1::
 	init_run()
@@ -34,7 +87,9 @@ return
 	ascend()
 return
 
+; The main speed run loop! Start with Ctrl+F1
 ^F1::
+	keywait, ctrl
 	loop
 	{
 		init_run()
@@ -47,14 +102,18 @@ return
 
 ; Simple long run embryo that loops 10 minutes of progression and farm mode till aborted (Alt+Pause)
 ; Use to get a few new gilds every now and then
-
 ^F2::
+	keywait, ctrl
 	loop
 	{
 		lvlup(10)
 		toggle_mode()
 	}
 return
+
+; -----------------------------------------------------------------------------------------
+; Functions
+; -----------------------------------------------------------------------------------------
 
 ; Level heroes to 100 and buy all upgrades
 ; Assumption: Iris at a high enough level (140ish), plus a "clickable" to unlock everything we upgrade
@@ -63,41 +122,29 @@ init_run()
 {
 	scroll_to_top()
 
-	upgrade(7) ; cid --> brittany
-	upgrade(7) ; fisherman --> leon
-	upgrade(7) ; seer --> mercedes
+	upgrade() ; cid --> brittany
+	upgrade() ; fisherman --> leon (change to 8 if needed)
+	upgrade() ; seer --> mercedes
 	upgrade(8) ; bobby --> king
-	upgrade(7) ; ice --> amenhotep
+	upgrade() ; ice --> amenhotep
 	upgrade(3) ; beastlord --> shinatobe
 	upgrade(0, 1) ; grant & frostleaf
 
 	buy_available_upgrades()
 }
 
-; Tune the scroll down click count (to 7 or 8) above and try to adjust the
-; local y coordinate below to keep itself inside the top lvl up button
-
-; Tips:
-; * Temporarily change the "ctrl_click" function to "clicky"
-; * Right-click the AutoHotkey script in the task bar and start Windows Spy
-; * After an ascension + "clickable":
-;   * Position your mouse pointer at relative coordinates 100, 273
-;   * Hit Alt+F1 and see if the pointer stays inside the lvl up button
-;   * Adjust when needed
-
-upgrade(timesDown, skip:=0)
+upgrade(times:=7, skip:=0) ; usually 7 scroll down clicks to reach the next 4 heroes, override above when needed
 {
 	global
-	local ly = 273
 
 	if (!skip) {
-		ctrl_click(x, ly)
-		ctrl_click(x, ly+o)
+		ctrl_click(xLvl, yLvlInit)
+		ctrl_click(xLvl, yLvlInit + oLvl)
 	}
-	ctrl_click(x, ly+o*2)
-	ctrl_click(x, ly+o*3)
+	ctrl_click(xLvl, yLvlInit + oLvl*2)
+	ctrl_click(xLvl, yLvlInit + oLvl*3)
 
-	scroll_down(timesDown)
+	scroll_down(times)
 }
 
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
@@ -119,72 +166,66 @@ speed_run()
 	scroll_down(2)
 	lvlup(20, 1, 1, 2) ; terra
 
-	show_splash("Speed run completed!")
+	show_splash("Speed run completed.")
 }
 
 ascend(autoYes:=0)
 {
 	global
-	scroll_to_top()
-	scroll_down(24) ; <-- adjust as needed
+	exitThread = 0
 
-	ctrl_click(x, 575) ; lvl up amenhotep
-	clicky(310, 590) ; ascend
+	show_splash("10 seconds to ASCENSION! (Abort with Alt+Break)", 10)
+	if (exitThread) {
+		show_splash("Ascension aborted!")
+		exit
+	}
+	scroll_to_top()
+	scroll_down(ascDownClicks)
+
+	ctrl_click(xLvl, yAsc) ; lvl up amenhotep to unlock the ascension button
+	clicky(xAsc, yAsc)
 	if (autoYes) {
-		clicky(500, 445) ; yes
+		clicky(xYes, yYes)
 	}
 }
 
-; Click'em all!
-get_clickables()
-{
-    clicky(524, 487)
-    clicky(747, 431)
-    clicky(755, 480)
-    clicky(760, 380)
-    clicky(873, 512)
-    clicky(1005, 453)
-    clicky(1053, 443)
-
-    sleep 10000 ; wait 10s to pick up all coins
-}
-
-; Level up the hero at position 1 (default) to 4 every 10s during the minutes given
-; Note that the loop can be aborted with Alt+Pause
+; Level up the hero at positions 1 (default) to 4 once every 10s during the minutes given
 lvlup(minutes, clickCount:=1, buyUpgrades:=0, button:=1)
 {
 	global
 	exitThread = 0
-	local ly = y + o * (button - 1)
+	local y := yLvl + oLvl * (button - 1)
 
-	ctrl_click(x, ly, clickCount)
+	ctrl_click(xLvl, y, clickCount)
 	if (buyUpgrades) {
 		buy_available_upgrades()
 	}
 
 	loop % minutes * 6 {
-		ctrl_click(x, ly)
+		ctrl_click(xLvl, y)
 		sleep 10000
 		if (exitThread) {
+			show_splash("Run aborted!")
 			exit
 		}
 	}
 }
 
 buy_available_upgrades() {
+	global
 	scroll_to_bottom()
-	clicky(300, 580)
+	clicky(xBuy, yBuy)
 }
 
 scroll_up(clickCount:=1) {
 	global
-	clicky(555, 220, clickCount)
+	clicky(xScroll, yUp, clickCount)
 	sleep % zzz * 2
 }
 
 scroll_down(clickCount:=1) {
 	global
-	clicky(555, 650, clickCount)
+	clicky(xScroll, yDown, clickCount)
 	sleep % zzz * 2
 }
 
@@ -226,10 +267,12 @@ toggle_mode()
 	sleep % zzz
 }
 
-show_splash(text)
+show_splash(text, seconds:=5, soundOn:=1)
 {
 	splashtexton,200,40,Auto-clicker,%text%
-	SoundPlay, %A_WinDir%\Media\tada.wav
-	sleep 5000
+	if (soundOn) {
+		SoundPlay, %A_WinDir%\Media\tada.wav
+	}
+	sleep % seconds * 1000
 	splashtextoff
 }
