@@ -6,16 +6,38 @@ zzz = 300 ; sleep delay (in ms) after a click
 exitThread = 0
 
 ; -----------------------------------------------------------------------------------------
-; Configuration
+;   Configuration
 ; -----------------------------------------------------------------------------------------
 
-; Use Windows Spy or click Alt+MiddleMouseButton to tune the below (relative) coordinates:
+; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
+; speed_run config
+
+optimalLevel = 1670
+irisLevel = 540
+
+; Lvl needed to immediately start leveling a ranger at 200 or above:
+; Atlas (540), Terra (790), Phthalo (1040), Didensy (1290)
+
+firstStintLevel = 790 ; when Iris is equal or higher, hop to the next in the list
+
+initialHero = 2 ; when scrolling to the bottom, start level up the 1st or 2nd hero?
+heroCount = 3 ; number of heroes (minimum 2) we will use to reach our optimal level
+
+extraTime = 0 ; if the script can't reach set level at max speed, add a little extra time (in minutes)
+
+; With the above settings, the script will do the following:
+; Start level with Atlas from 540 to 790, then Terra till ~1040 and lastly Phthalo till 1670
+
+; -----------------------------------------------------------------------------------------
+
+; Use Windows Spy or click Alt+MiddleMouseButton to tune the below (relative) coordinates.
+; Client size -- w: 1136, h: 640
 
 ; Top LVL UP button when scrolled to the bottom
 xLvl = 100
 yLvl = 285
 
-yLvlInit = 273 ; adjusted y position used during the init run
+yLvlInit = 240 ; adjusted y position used during the init run
 
 oLvl = 107 ; offset to next lvl up button
 
@@ -29,9 +51,9 @@ xBuy = 300
 yBuy = 580
 
 ; Ascension button
-ascDownClicks = 24 ; # of down clicks needed to spot the button after a speed run
+ascDownClicks = 23 ; # of down clicks needed to spot the button after a speed run
 xAsc = 310
-yAsc = 591
+yAsc = 600
 
 ; Ascend Yes button
 xYes = 500
@@ -48,13 +70,11 @@ get_clickables()
     clicky(1005, 453)
     clicky(1053, 443)
 
-    sleep 10000 ; wait 10s to pick up all coins
+    sleep 8000 ; wait 8s to pick up all coins
 }
 
-; Important! Configure your gilded heroes in the speed_run() function.
-
 ; -----------------------------------------------------------------------------------------
-; Hotkeys
+;   Hotkeys
 ; -----------------------------------------------------------------------------------------
 
 ; Show the cursor position with Alt+MiddleMouseButton
@@ -76,14 +96,17 @@ return
 ; Alt+F1 to F3 are here for testing purposes before running the full speed run loop
 
 !F1::
+	keywait, alt
 	init_run()
 return
 
 !F2::
+	keywait, alt
 	speed_run()
 return
 
 !F3::
+	keywait, alt
 	ascend()
 return
 
@@ -112,59 +135,63 @@ return
 return
 
 ; -----------------------------------------------------------------------------------------
-; Functions
+;   Functions
 ; -----------------------------------------------------------------------------------------
 
-; Level heroes to 100 and buy all upgrades
-; Assumption: Iris at a high enough level (140ish), plus a "clickable" to unlock everything we upgrade
+; Level Cid --> Amenhotep to 200, Beastlord --> Frostleaf to 100 and buy all upgrades.
+; Assumption: Iris above level 140, plus a "clickable" to unlock everything we upgrade
 
 init_run()
 {
+	sleep 1000
 	scroll_to_top()
 
-	upgrade() ; cid --> brittany
-	upgrade() ; fisherman --> leon (change to 8 if needed)
-	upgrade() ; seer --> mercedes
-	upgrade(8) ; bobby --> king
-	upgrade() ; ice --> amenhotep
-	upgrade(3) ; beastlord --> shinatobe
-	upgrade(0, 1) ; grant & frostleaf
+	; Iris level dictates how many scroll down clicks we need to reach the next four heroes
+	upgrade(7, 2) ; cid --> brittany
+	upgrade(7, 2) ; fisherman --> leon (change to 8 if needed)
+	upgrade(7, 2) ; seer --> mercedes
+	upgrade(7, 2) ; bobby --> king (change to 8 if needed)
+	upgrade(7, 2) ; ice --> amenhotep
+	upgrade(3, 1) ; beastlord --> shinatobe
+	upgrade(0, 1, 1) ; grant & frostleaf
 
 	buy_available_upgrades()
 }
 
-upgrade(times:=7, skip:=0) ; usually 7 scroll down clicks to reach the next 4 heroes, override above when needed
+upgrade(times, clickCount, skip:=0)
 {
 	global
 
 	if (!skip) {
-		ctrl_click(xLvl, yLvlInit)
-		ctrl_click(xLvl, yLvlInit + oLvl)
+		ctrl_click(xLvl, yLvlInit, clickCount)
+		ctrl_click(xLvl, yLvlInit + oLvl, clickCount)
 	}
-	ctrl_click(xLvl, yLvlInit + oLvl*2)
-	ctrl_click(xLvl, yLvlInit + oLvl*3)
+	ctrl_click(xLvl, yLvlInit + oLvl*2, clickCount)
+	ctrl_click(xLvl, yLvlInit + oLvl*3, clickCount)
 
 	scroll_down(times)
 }
 
-; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
-; Adjust to optimal level runs (usually 30-40 minutes)
-; First (one or) two heroes are expected to insta-kill everything with little to no gilds
-; at a speed of around 7 minutes per 250 levels
+; All heroes/rangers are expected to "insta-kill" everything at max speed (i.e. around
+; 7 minutes per 250 levels). Only the last 2-3 minutes should slow down slightly.
 speed_run()
 {
-	; scroll_to_top()
-	; scroll_down(9)
-	; lvlup(9, 10) ; samurai
+	global
+	middleStints := heroCount - 2
+	runTime := ceil((optimalLevel - irisLevel) * 7 / 250)
+	firstStintTime := ceil((firstStintLevel - irisLevel) * 7 / 250)
+	middleStintTime = 7
+	lastStintTime := runTime - firstStintTime - middleStintTime*middleStints + extraTime
 
 	scroll_to_bottom()
-	lvlup(7, 4) ; frostleaf to lvl 550+
-
-	; Not yet upgraded ranger(s) at 2nd button position
-	scroll_down(4)
-	lvlup(7, 1, 1, 2) ; atlas to lvl 800+
-	scroll_down(2)
-	lvlup(20, 1, 1, 2) ; terra
+	lvlup(firstStintTime, 1, initialHero)
+	loop % middleStints
+	{
+		scroll_way_down(2)
+		lvlup(middleStintTime, 1, 2)
+	}
+	scroll_way_down(2)
+	lvlup(lastStintTime, 1, 2)
 
 	show_splash("Speed run completed.")
 }
@@ -174,7 +201,7 @@ ascend(autoYes:=0)
 	global
 	exitThread = 0
 
-	show_splash("10 seconds to ASCENSION! (Abort with Alt+Break)", 10)
+	show_splash("10 seconds till ASCENSION! (Abort with Alt+Pause)", 10, 2)
 	if (exitThread) {
 		show_splash("Ascension aborted!")
 		exit
@@ -182,7 +209,6 @@ ascend(autoYes:=0)
 	scroll_to_top()
 	scroll_down(ascDownClicks)
 
-	ctrl_click(xLvl, yAsc) ; lvl up amenhotep to unlock the ascension button
 	clicky(xAsc, yAsc)
 	if (autoYes) {
 		clicky(xYes, yYes)
@@ -190,20 +216,21 @@ ascend(autoYes:=0)
 }
 
 ; Level up the hero at positions 1 (default) to 4 once every 10s during the minutes given
-lvlup(minutes, clickCount:=1, buyUpgrades:=0, button:=1)
+lvlup(minutes, buyUpgrades:=0, button:=1)
 {
 	global
 	exitThread = 0
 	local y := yLvl + oLvl * (button - 1)
 
-	ctrl_click(xLvl, y, clickCount)
 	if (buyUpgrades) {
+		ctrl_click(xLvl, y)
 		buy_available_upgrades()
 	}
+	max_click(xLvl, y)
 
 	loop % minutes * 6 {
 		ctrl_click(xLvl, y)
-		sleep 10000
+		sleep % 10000 - zzz ; compensate for the click delay
 		if (exitThread) {
 			show_splash("Run aborted!")
 			exit
@@ -229,6 +256,12 @@ scroll_down(clickCount:=1) {
 	sleep % zzz * 2
 }
 
+; Scroll down fix when at bottom and scroll bar don't update correctly
+scroll_way_down(clickCount:=1) {
+	scroll_up()
+	scroll_down(clickCount + 1)
+}
+
 scroll_to_top()
 {
 	global
@@ -241,6 +274,15 @@ scroll_to_bottom()
 	global
 	ControlClick,,% winName,,wheeldown,20
 	sleep % zzz * 3
+}
+
+max_click(xCoord, yCoord)
+{
+	global
+	ControlSend,, {shift down}{q down}, % winName
+	ControlClick,% "x" xCoord " y" yCoord,% winName,,,,Pos
+	ControlSend,, {q up}{shift up}, % winName
+	sleep % zzz
 }
 
 ctrl_click(xCoord, yCoord, clickCount:=1)
@@ -267,10 +309,12 @@ toggle_mode()
 	sleep % zzz
 }
 
-show_splash(text, seconds:=5, soundOn:=1)
+show_splash(text, seconds:=5, sound:=1)
 {
 	splashtexton,200,40,Auto-clicker,%text%
-	if (soundOn) {
+	if (sound = 1) {
+		SoundPlay, %A_WinDir%\Media\Windows User Account Control.wav
+	} else if (sound = 2) {
 		SoundPlay, %A_WinDir%\Media\tada.wav
 	}
 	sleep % seconds * 1000
