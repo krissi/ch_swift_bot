@@ -12,11 +12,17 @@ exitThread = 0
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 ; speed_run config
 
-optimalLevel = 1670
-irisLevel = 540
+optimalLevel = 1700
 
-; Lvl needed to immediately start leveling a ranger at 200 or above:
-; Atlas (540), Terra (790), Phthalo (1040), Didensy (1290)
+; Lvl (+/- 5) needed to trigger a new ranger to spawn:
+; 175 (Atlas), 425 (Terra), 675 (Phthalo), 925 (Didensy), 1175 (Lilin)
+; When passing any of these breakpoints, you most likely have to update the ascension
+; coordinates and possibly also the init_run function; Search for (*)
+
+irisLevel = 598
+
+; Approximate lvl needed to immediately start leveling a ranger at 200 or above:
+; 540 (Atlas), 790 (Terra), 1040 (Phthalo), 1290 (Didensy), 1540 (Lilin)
 
 firstStintLevel = 790 ; when Iris is equal or higher, hop to the next in the list
 
@@ -26,7 +32,7 @@ heroCount = 3 ; number of heroes (minimum 2) we will use to reach our optimal le
 extraTime = 0 ; if the script can't reach set level at max speed, add a little extra time (in minutes)
 
 ; With the above settings, the script will do the following:
-; Start level with Atlas from 540 to 790, then Terra till ~1040 and lastly Phthalo till 1670
+; Start level with Atlas from 598 to ~790, then Terra till ~1040 and lastly Phthalo till >1700
 
 ; -----------------------------------------------------------------------------------------
 
@@ -50,10 +56,10 @@ yDown = 650
 xBuy = 300
 yBuy = 580
 
-; Ascension button
-ascDownClicks = 23 ; # of down clicks needed to spot the button after a speed run
+; Ascension button (*)
+ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible
 xAsc = 310
-yAsc = 600
+yAsc = 468
 
 ; Ascend Yes button
 xYes = 500
@@ -116,6 +122,7 @@ return
 	loop
 	{
 		init_run()
+		activate_all_skills()
 		speed_run()
 		ascend(1) ; auto-click yes
 		get_clickables()
@@ -148,9 +155,9 @@ init_run()
 
 	; Iris level dictates how many scroll down clicks we need to reach the next four heroes
 	upgrade(7, 2) ; cid --> brittany
-	upgrade(7, 2) ; fisherman --> leon (change to 8 if needed)
+	upgrade(7, 2) ; fisherman --> leon (*) change to 8 if needed
 	upgrade(7, 2) ; seer --> mercedes
-	upgrade(7, 2) ; bobby --> king (change to 8 if needed)
+	upgrade(7, 2) ; bobby --> king (*) change to 8 if needed
 	upgrade(7, 2) ; ice --> amenhotep
 	upgrade(3, 1) ; beastlord --> shinatobe
 	upgrade(0, 1, 1) ; grant & frostleaf
@@ -177,11 +184,13 @@ upgrade(times, clickCount, skip:=0)
 speed_run()
 {
 	global
-	middleStints := heroCount - 2
-	runTime := ceil((optimalLevel - irisLevel) * 7 / 250)
-	firstStintTime := ceil((firstStintLevel - irisLevel) * 7 / 250)
-	middleStintTime = 7
-	lastStintTime := runTime - firstStintTime - middleStintTime*middleStints + extraTime
+	local middleStints := heroCount - 2
+	local runTime := ceil((optimalLevel - irisLevel) * 7 / 250)
+	local firstStintTime := ceil((firstStintLevel - irisLevel) * 7 / 250)
+	local middleStintTime = 7
+	local lastStintTime := runTime - firstStintTime - middleStintTime*middleStints + extraTime
+
+	show_splash("Estimated run time: " . runTime + extraTime . " min", 5, 0)
 
 	scroll_to_bottom()
 	lvlup(firstStintTime, 1, initialHero)
@@ -193,13 +202,15 @@ speed_run()
 	scroll_way_down(2)
 	lvlup(lastStintTime, 1, 2)
 
-	show_splash("Speed run completed.")
+	show_splash("Run completed.")
 }
 
 ascend(autoYes:=0)
 {
 	global
 	exitThread = 0
+	local buttonSize = 34
+	local y = yAsc - 3 * buttonSize
 
 	show_splash("10 seconds till ASCENSION! (Abort with Alt+Pause)", 10, 2)
 	if (exitThread) {
@@ -209,7 +220,13 @@ ascend(autoYes:=0)
 	scroll_to_top()
 	scroll_down(ascDownClicks)
 
-	clicky(xAsc, yAsc)
+	; Scrolling is not an exact science, hence we click above, center and below
+	loop 7
+	{
+		clicky(xAsc, y)
+		y := y + buttonSize
+	}
+
 	if (autoYes) {
 		clicky(xYes, yYes)
 	}
@@ -306,6 +323,21 @@ toggle_mode()
 {
 	global
 	ControlSend,, {a down}{a up}, % winName
+	sleep % zzz
+}
+
+activate_all_skills()
+{
+	global
+	ControlSend,, {1 down}{1 up}, % winName
+	ControlSend,, {2 down}{2 up}, % winName
+	ControlSend,, {3 down}{3 up}, % winName
+	ControlSend,, {4 down}{4 up}, % winName
+	ControlSend,, {5 down}{5 up}, % winName
+	ControlSend,, {7 down}{7 up}, % winName
+	ControlSend,, {8 down}{8 up}, % winName
+	ControlSend,, {6 down}{6 up}, % winName
+	ControlSend,, {9 down}{9 up}, % winName
 	sleep % zzz
 }
 
