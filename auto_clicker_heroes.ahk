@@ -1,6 +1,6 @@
 ; -----------------------------------------------------------------------------------------
 ; Clicker Heroes HS Speed Farmer
-; v1.6
+; v1.61
 ; by Sw1ftb
 
 ; Note that this bot is not intended for the early game!
@@ -17,16 +17,23 @@
 ;    (While there, glance through the configured Hotkeys)
 ; 3. If those works, go back up and adjust the Coordinates > init_run function settings.
 ;    Some tinkering might be needed if you are at a later stage in the game than me.
-; 4. When that bit work, go back up and configure your Speed run settings.
-;    Adjust the irisLevel and gildedRanger. Leave the rest as is and hit Ctrl+F1!
+; 4. When that bit work, go back up and configure your Speed run.
+;    Adjust the irisLevel and gildedRanger settings. Leave the rest as is and hit Ctrl+F1!
 ;    Important! The script assumes that you have just ascended with a "clickable" available and in Farm Mode.
 ; 5. If everything works you should end up with a "Salvage Junk Pile & Ascend?" question after ~30 minutes.
-;    If you answer No, the speed run will end. Yes will salvage, ascend and restart.
+;    Answer No, then find the Coordinates > Ascension button settings and adjust if needed.
+; 6. Now click Alt+F4 to manually restart the ascend function.
+;    Before hitting Yes to continue, verify that your junk pile is ok to salvage.
+; 7. If the script managed to salvage and ascend successfully, then everything is now operational.
 ;
-; If you ended the run, you now have the option to change any setting you like.
-; E.g. setting autoAscend to 1 to go true idle mode when AFK.
+; Options you might want to change:
+; * speedRunTime - depending on the end zone lvl you aim at, adjust as needed
+; * activateSkillsAtStart - if you do longer runs (>35 minutes), you might benefit from the energize + dark ritual dps bonus
+; * autoAscend - for those over night farm sessions
 ;
-; After any configuration change, you must reload the script with Alt+F5 (and Alt+F6 if you run in a browser) for the changes to take effect.
+; If you can speed run to 1700 or above (in less than 30 minutes) and have a hybrid build (with Bhaal, Frag, Jugg and co.), you might want to try the Deep run option. I myself only uses it to maybe once a week to do a 30 minute push for a few new gilds. It is designed to start off where a speed run finish and will only lvl up the same ranger till the end. Just set the deepRunTime duration and hit Ctrl+F2.
+;
+; Note that you must reload the script with Alt+F5 (and Alt+F6 if you run in a browser) for any change to take effect.
 ;
 ; At any given time, you can pause the script with the Pause button, or abort a run with Alt+Pause.
 
@@ -34,6 +41,7 @@
 
 #Persistent
 #NoEnv
+#InstallKeybdHook
 Thread, interrupt, 0
 
 winName=Clicker Heroes
@@ -79,9 +87,9 @@ lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 
 speedRunTime = 30 ; minutes
-irisLevel = 798 ; try to keep your Iris within 1000 levels of your optimal zone lvl
+irisLevel = 843 ; try to keep your Iris within 1000 levels of your optimal zone lvl
 
-lvl200Threshold := 20 * 2 ; if the script start on ranger #2 below lvl 100 and misses the upgrades, then up the multiplier a notch
+lvlThreshold := 20 * 3 ; if the script start on ranger #2 below lvl 100 and misses the upgrades, then up the multiplier a notch
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
 gildedRanger = 5 ; your main guilded ranger. Tip: Keep 1 gild on the 3 rangers prior to not get stuck at the start.
@@ -124,7 +132,7 @@ yLvlInit = 273 ; try 240 if 273 don't work
 ; Atlas        [7,7,7,8,7,3], 273
 ; Dread Knight [7,8,7,8,7,3], ?
 
-; Ascension button
+; Ascension button settings
 ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible (after a full speed run)
 xAsc = 310
 yAsc = 468
@@ -345,11 +353,11 @@ upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0)
 ; 7 minutes per 250 levels). Only the last 2-3 minutes should slow down slightly.
 speed_run()
 {
-	global speedRunTime, irisLevel, gildedRanger, lvl200Threshold
+	global speedRunTime, irisLevel, gildedRanger, lvlThreshold
 	tMax := 7 * 60
 	lMax := 250
 
-	zoneLvl := gildedRanger * lMax + lvl200Threshold ; approx zone lvl where we can buy our gilded ranger @ lvl 200
+	zoneLvl := gildedRanger * lMax + lvlThreshold ; approx zone lvl where we can buy our gilded ranger @ lvl 200
 	lvls := zoneLvl - irisLevel ; lvl's to get there
 
 	firstStintTime := ceil(mod(lvls, lMax) * tMax / lMax)
@@ -430,7 +438,7 @@ ascend(autoYes:=0)
 	sleep % zzz * 2
 
 	; Scrolling is not an exact science, hence we click above, center and below
-	loop 7
+	loop 9
 	{
 		click_(xAsc, y)
 		y := y + buttonSize
