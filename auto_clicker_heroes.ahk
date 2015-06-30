@@ -1,6 +1,6 @@
 ; -----------------------------------------------------------------------------------------
 ; Clicker Heroes HS Speed Farmer
-; v1.61
+; v1.7
 ; by Sw1ftb
 
 ; Note that this bot is not intended for the early game!
@@ -46,6 +46,8 @@ Thread, interrupt, 0
 
 winName=Clicker Heroes
 
+global RunProgress ; progress bar control
+
 exitThread = 0
 exitDRThread = 0
 
@@ -77,33 +79,38 @@ topMarginOffset = 0
 ; In Clicker Heroes, turn off the "Show relic found popups" option.
 
 ; This is the base setting for how fast or slow the script will run.
-; 200 is a safe setting. Anything lower than 100 is on your own risk!
+; 200 is a safe setting. Anything lower than 150 is on your own risk!
 zzz = 200 ; sleep delay (in ms) after a click
 
 lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
+progressUpdateDelay = 30
 
 ; -- Speed run ----------------------------------------------------------------------------
 
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 
 speedRunTime = 30 ; minutes
-irisLevel = 843 ; try to keep your Iris within 1000 levels of your optimal zone lvl
+irisLevel = 898 ; try to keep your Iris within 1000 levels of your optimal zone lvl
 
-lvlThreshold := 20 * 3 ; if the script start on ranger #2 below lvl 100 and misses the upgrades, then up the multiplier a notch
+; Adjust this setting if you don't reach your gilded ranger at lvl 150 or higher.
+lvlThreshold := 0
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
 gildedRanger = 5 ; your main guilded ranger. Tip: Keep 1 gild on the 3 rangers prior to not get stuck at the start.
 
-activateSkillsAtStart = 0
+activateSkillsAtStart = 1
 
 ; Added flag for v0.19.
 autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
 
 ; -- Deep run -----------------------------------------------------------------------------
 
-deepRunTime = 20 ; minutes
+deepRunTime = 60 ; minutes
 coolDownTime = 15 ; assuming Vaagur lvl 15
 clickableDelay = 30 ; hunt for a clickable every 30s (set to 0 to stop hunting)
+
+; If you want a stable run, I strongly recommend using an external auto-clicker.
+cpsTarget = 25 ; monster clicks per second (0 for external) 
 
 ; -- Coordinates --------------------------------------------------------------------------
 
@@ -122,15 +129,15 @@ initDownClicks := [6,7,7,6,7,3] ; # of clicks down needed to get next 4 heroes i
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
 ; Trial run with Alt+F2. Tip: If things move to fast, temporarily increase the zzz parameter to slow down the script.
-yLvlInit = 273 ; try 240 if 273 don't work
+yLvlInit = 273
 
-; After an ascend + clickable, who's the last ranger visible? Suggested settings:
+; After an ascend + clickable, who's at the bottom? Suggested settings:
 ; Lilin        [6,6,6,6,6,3], 285
 ; Banana        ???
 ; Phthalo      [6,7,7,6,7,3], 273
 ; Terra        [7,7,7,7,7,3], 240
 ; Atlas        [7,7,7,8,7,3], 273
-; Dread Knight [7,8,7,8,7,3], ?
+; Dread Knight [7,8,7,8,7,4], 257
 
 ; Ascension button settings
 ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible (after a full speed run)
@@ -211,7 +218,7 @@ return
 ; Show the cursor position with Alt+Middle Mouse Button
 !mbutton::
 	mousegetpos, xpos, ypos
-	msgbox, Cursor position: x%xpos% y%ypos%
+	msgbox,% "Cursor position: x" xpos-leftMarginOffset " y" ypos-topMarginOffset
 return
 
 ; Reload script with Alt+F5
@@ -295,8 +302,11 @@ return
 ^F2::
 	exitDRThread = 0
 	monsterClicks = 0
+	cds := coolDownTime * 60
 
 	show_splash("Starting deep run...", 2, 0)
+	start_progress("Deep Run Progress", 0, deepRunTime * 60 // progressUpdateDelay)
+
 	drStartTime := A_TickCount
 
 	fast_mode()
@@ -306,8 +316,38 @@ return
 	if (clickableDelay > 0) {
 		setTimer, hunt4Clickable, % clickableDelay * 1000
 	}
-	setTimer, activateSkills, 1000
-	setTimer, slayMonsters, 25
+	if (cpsTarget > 0) {
+		setTimer, slayMonsters, % 1000 / cpsTarget
+	}
+
+	toggle = true
+
+	while(!exitDRThread)
+	{
+		if (mod(A_Index, cds) = 0) {
+			if (toggle) {
+				activate_skills()
+				activate_edr_skills()
+			} else {
+				activate_er_skills()
+				activate_skills()
+			}
+			toggle := !toggle
+		}
+		sleep 1000
+		secondsPassed := (A_TickCount - drStartTime) // 1000
+		update_progress(secondsPassed // progressUpdateDelay)
+	}
+	stop_progress()
+
+	setTimer, slayMonsters, off
+	setTimer, hunt4Clickable, off
+	setTimer, levelUpHero, off
+
+	elapsedTime := (A_TickCount - drStartTime) / 1000
+	clicksPerSecond := round(monsterClicks / elapsedTime, 2)
+
+	show_splash("Deep run ended (" . clicksPerSecond . " cps)")
 return
 
 ; -----------------------------------------------------------------------------------------
@@ -353,39 +393,35 @@ upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0)
 ; 7 minutes per 250 levels). Only the last 2-3 minutes should slow down slightly.
 speed_run()
 {
-	global speedRunTime, irisLevel, gildedRanger, lvlThreshold
+	global speedRunTime, irisLevel, gildedRanger, lvlThreshold, initDownClicks, progressUpdateDelay
+	global srStartTime := A_TickCount
 	tMax := 7 * 60
 	lMax := 250
 
 	zoneLvl := gildedRanger * lMax + lvlThreshold ; approx zone lvl where we can buy our gilded ranger @ lvl 200
 	lvls := zoneLvl - irisLevel ; lvl's to get there
 
-	firstStintTime := ceil(mod(lvls, lMax) * tMax / lMax)
-	if (firstStintTime = 0) {
-		firstStintTime := tMax
-	}
-	lastStintTime := speedRunTime * 60 - firstStintTime - tMax
+	firstStintTime := ceil(lvls * tMax / lMax)
+	lastStintTime := speedRunTime * 60 - firstStintTime
+
+	show_splash("Starting speed run...", 2, 0)
+	start_progress("Speed Run Progress", 0, speedRunTime * 60 // progressUpdateDelay)
 
 	switch2combat()
-	scroll_to_bottom()
 
-	; Level up in stints. Hop to the next ranger as soon as we start at lvl 200 or higher.
-	; The last (500 lvls) stint should, if everything works, always be on your configured gilded ranger.
-
-	if (lvls > 2 * lMax)
+	if (irisLevel < lMax + lvlThreshold) ; Iris high enough to start with a ranger?
 	{
-		lvlup(firstStintTime, 1, 1)
-		scroll_way_down(2)
-		lvlup(tMax, 1, 2)
-		lastStintTime -= tMax
+		scroll_down(initDownClicks[1])
+		lvlup(firstStintTime, 0, 3) ; nope, let's bridge with Samurai
+		scroll_to_bottom()
 	} else {
-		lvlup(firstStintTime, 1, 2)
+		scroll_to_bottom()
+		lvlup(firstStintTime, 1, 1) ; yes, take whoever is first
+		scroll_way_down(4)
 	}
-	scroll_way_down(2)
-	lvlup(tMax, 1, 2)
-	scroll_way_down(2)
 	lvlup(lastStintTime, 1, 2)
 
+	stop_progress()
 	show_splash("Speed run completed.")
 }
 
@@ -405,9 +441,12 @@ lvlup(seconds, buyUpgrades:=0, button:=1)
 		ctrl_click(xLvl, y)
 		sleep % lvlUpDelay * 1000 - zzz ; compensate for the click delay
 		if (exitThread) {
+			stop_progress()
 			show_splash("Speed run aborted!")
 			exit
 		}
+		secondsPassed := (A_TickCount - srStartTime) // 1000
+		update_progress(secondsPassed // progressUpdateDelay)
 	}
 }
 
@@ -592,6 +631,22 @@ show_splash(text, seconds:=5, sound:=1)
 	splashtextoff
 }
 
+start_progress(title, min:=0, max:=100)
+{
+	gui, new
+	gui, margin, 0, 0
+	gui, add, progress,% "w300 h30 range" min "-" max " -smooth vRunProgress"
+	gui, show, x20 y20,% title
+}
+
+update_progress(position) {
+	guicontrol,, RunProgress,% position
+}
+
+stop_progress() {
+	gui, destroy
+}
+
 fast_mode() {
 	SetControlDelay, -1
 }
@@ -610,31 +665,10 @@ return
 
 levelUpHero:
 	ctrl_click(xLvl, yLvl + oLvl, 1, 0)
-	if (exitDRThread) {
-		elapsedTime := (A_TickCount - drStartTime) / 1000
-		clicksPerSecond := round(monsterClicks / elapsedTime, 2)
-
-		setTimer,, off
-		setTimer, hunt4Clickable, off
-		setTimer, activateSkills, off
-		setTimer, slayMonsters, off
-
-		show_splash("Deep run ended (" . clicksPerSecond . " cps)")
-	}
 return
 
 hunt4Clickable:
 	get_clickable()
-return
-
-activateSkills:
-	cds := coolDownTime * 60 * 1000 + 1000
-	activate_skills()
-	activate_edr_skills()
-	sleep % cds
-	activate_er_skills()
-	activate_skills()
-	sleep % cds
 return
 
 slayMonsters:
