@@ -397,6 +397,7 @@ upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0) {
 speedRun() {
 	global
 
+	local stint := 0
 	local stints := 2
 	local tMax := 7 * 60
 	local lMax := 250
@@ -407,7 +408,7 @@ speedRun() {
 
 	if (lvls > lMax) ; add a mid stint if needed
 	{
-		midStintTime := ceil(lMax * tMax / lMax)
+		midStintTime := tMax
 		lvls -= lMax
 		stints += 1
 	}
@@ -423,18 +424,18 @@ speedRun() {
 	if (irisLevel < lMax + lvlThreshold) ; Iris high enough to start with a ranger?
 	{
 		scrollDown(initDownClicks[1])
-		lvlUp(firstStintTime, 0, 3, 1, stints) ; nope, let's bridge with Samurai
+		lvlUp(firstStintTime, 0, 3, ++stint, stints) ; nope, let's bridge with Samurai
 		scrollToBottom()
 	} else {
 		scrollToBottom()
-		lvlUp(firstStintTime, 1, 1, 1, stints)
+		lvlUp(firstStintTime, 1, 1, ++stint, stints)
 		scrollWayDown(2)
 	}
 	if (midStintTime) {
-		lvlUp(midStintTime, 1, 2, 2, stints)
+		lvlUp(midStintTime, 1, 2, ++stint, stints)
 		scrollWayDown(2)
 	}
-	lvlUp(lastStintTime, 1, 2, 3, stints)
+	lvlUp(lastStintTime, 1, 2, ++stint, stints)
 
 	showSplash("Speed run completed.")
 }
