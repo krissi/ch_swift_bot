@@ -434,7 +434,7 @@ speedRun() {
 		lvlUp(midStintTime, 1, 2, 2, stints)
 		scrollWayDown(2)
 	}
-	lvlUp(lastStintTime, 1, 2, 2, stints)
+	lvlUp(lastStintTime, 1, 2, 3, stints)
 
 	showSplash("Speed run completed.")
 }
