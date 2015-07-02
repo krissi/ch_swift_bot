@@ -1,6 +1,6 @@
 ; -----------------------------------------------------------------------------------------
 ; Clicker Heroes HS Speed Farmer
-; v1.7
+; v1.8
 ; by Sw1ftb
 
 ; Note that this bot is not intended for the early game!
@@ -14,8 +14,7 @@
 ; - If Steam, make sure you run in windowed mode at default size (1136 x 640).
 ; - If browser, follow the instructions below for setting the correct top margin.
 ; 2. Scroll down to the Hotkeys section and run the "Quick initial tests".
-;    (While there, glance through the configured Hotkeys)
-; 3. If those works, go back up and adjust the Coordinates > init_run function settings.
+; 3. If those works, go back up and adjust the Coordinates > initRun function settings.
 ;    Some tinkering might be needed if you are at a later stage in the game than me.
 ; 4. When that bit work, go back up and configure your Speed run.
 ;    Adjust the irisLevel and gildedRanger settings. Leave the rest as is and hit Ctrl+F1!
@@ -31,7 +30,9 @@
 ; * activateSkillsAtStart - if you do longer runs (>35 minutes), you might benefit from the energize + dark ritual dps bonus
 ; * autoAscend - for those over night farm sessions
 ;
-; If you can speed run to 1700 or above (in less than 30 minutes) and have a hybrid build (with Bhaal, Frag, Jugg and co.), you might want to try the Deep run option. I myself only uses it to maybe once a week to do a 30 minute push for a few new gilds. It is designed to start off where a speed run finish and will only lvl up the same ranger till the end. Just set the deepRunTime duration and hit Ctrl+F2.
+; If you can speed run to 1700 or above (in less than 30 minutes) and have a hybrid build (with Bhaal, Frag, 
+; Jugg and co.), you might want to try the Deep run option. It is designed to start off where a speed run 
+; finish and will only lvl up the same ranger till the end. Just set the deepRunTime duration and hit Ctrl+F2.
 ;
 ; Note that you must reload the script with Alt+F5 (and Alt+F6 if you run in a browser) for any change to take effect.
 ;
@@ -46,7 +47,7 @@ Thread, interrupt, 0
 
 winName=Clicker Heroes
 
-global RunProgress ; progress bar control
+global ProgressBar, ProgressBarTime ; progress bar controls
 
 exitThread = 0
 exitDRThread = 0
@@ -83,29 +84,29 @@ topMarginOffset = 0
 zzz = 200 ; sleep delay (in ms) after a click
 
 lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
-progressUpdateDelay = 30
+barUpdateDelay = 30
 
 ; -- Speed run ----------------------------------------------------------------------------
 
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 
 speedRunTime = 30 ; minutes
-irisLevel = 898 ; try to keep your Iris within 1000 levels of your optimal zone lvl
-
-; Adjust this setting if you don't reach your gilded ranger at lvl 150 or higher.
-lvlThreshold := 0
+irisLevel = 1013 ; try to keep your Iris within 1000 levels of your optimal zone lvl
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
-gildedRanger = 5 ; your main guilded ranger. Tip: Keep 1 gild on the 3 rangers prior to not get stuck at the start.
+gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starting the run.
 
-activateSkillsAtStart = 1
+; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
+thresholdFactor = 1 ; 0, 1 or 2
+
+activateSkillsAtStart = 0
 
 ; Added flag for v0.19.
-autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
+autoAscend = 1 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
 
 ; -- Deep run -----------------------------------------------------------------------------
 
-deepRunTime = 60 ; minutes
+deepRunTime = 30 ; minutes
 coolDownTime = 15 ; assuming Vaagur lvl 15
 clickableDelay = 30 ; hunt for a clickable every 30s (set to 0 to stop hunting)
 
@@ -114,7 +115,7 @@ cpsTarget = 25 ; monster clicks per second (0 for external)
 
 ; -- Coordinates --------------------------------------------------------------------------
 
-; Use Windows Spy or click Alt+MiddleMouseButton to tune the below (relative) coordinates.
+; Use Windows Spy (for Steam version) or click Alt+MiddleMouseButton to tune the below (relative) coordinates.
 
 ; Top LVL UP button when scrolled to the bottom
 xLvl = 100
@@ -122,18 +123,18 @@ yLvl = 285
 oLvl = 107 ; offset to next button
 
 ; Approximate Iris lvl thresholds that affect the scroll bar:
-; 225 (Atlas), 475 (Terra), 725 (Phthalo), 975 (Banana), 1225 (Lilin)
+; 260 (Atlas), 510 (Terra), 760 (Phthalo), 1010 (Banana), 1260 (Lilin)
 
-; init_run function settings
-initDownClicks := [6,7,7,6,7,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
+; initRun function settings
+initDownClicks :=  [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
 ; Trial run with Alt+F2. Tip: If things move to fast, temporarily increase the zzz parameter to slow down the script.
-yLvlInit = 273
+yLvlInit = 240
 
-; After an ascend + clickable, who's at the bottom? Suggested settings:
+; After an ascend plus (non-idle) clickable, who's at the bottom? Suggested settings:
 ; Lilin        [6,6,6,6,6,3], 285
-; Banana        ???
+; Banana       [6,7,6,7,6,3], 240
 ; Phthalo      [6,7,7,6,7,3], 273
 ; Terra        [7,7,7,7,7,3], 240
 ; Atlas        [7,7,7,8,7,3], 273
@@ -172,23 +173,28 @@ top2BottomClicks = 50
 xBuy = 300
 yBuy = 580
 
+xHero = 474
+yHero = 229
+
+xMonster = 860
+yMonster = 420
+
 ; No smart image recognition, so we click'em all!
 get_clickable()
 {
-    click_(524, 487)
-    click_(747, 431)
-    click_(755, 480)
-    click_(760, 380)
-    click_(873, 512)
-    click_(1005, 453)
-    click_(1053, 443)
+	global
+	; Break idle on purpose to get the same amount of gold every run
+	clickPos(xMonster, yMonster)
+	clickPos(xMonster, yMonster)
+	sleep 1000
+    clickPos(524, 487)
+    clickPos(747, 431)
+    clickPos(755, 480)
+    clickPos(760, 380)
+    clickPos(873, 512)
+    clickPos(1005, 453)
+    clickPos(1053, 443)
 }
-
-xMonster = 1053
-yMonster = 443
-
-xHero = 474
-yHero = 229
 
 ; -----------------------------------------------------------------------------------------
 ; -- Hotkeys (+=Shift, !=Alt, ^=Ctrl)
@@ -200,19 +206,19 @@ yHero = 229
 ; Shift+F3 should switch to the relics tab and then back
 
 +F1::
-	scroll_to_bottom()
-	click_(xLvl, yLvl)
+	scrollToBottom()
+	clickPos(xLvl, yLvl)
 return
 
 +F2::
-	scroll_to_top()
-	scroll_down(initDownClicks[1])
-	click_(xLvl, yLvl)
+	scrollToTop()
+	scrollDown(initDownClicks[1])
+	clickPos(xLvl, yLvl)
 return
 
 +F3::
-	switch2relic()
-	switch2combat()
+	switchToRelicTab()
+	switchToCombatTab()
 return
 
 ; Show the cursor position with Alt+Middle Mouse Button
@@ -223,7 +229,7 @@ return
 
 ; Reload script with Alt+F5
 !F5::
-	show_splash("Reloading...", 2, 0)
+	showSplash("Reloading...", 2, 0)
 	Reload
 return
 
@@ -233,7 +239,7 @@ return
 
 	IfWinExist, % winName
 	{
-		show_splash("Calculating browser offsets...")
+		showSplash("Calculating browser offsets...")
 
 		WinActivate
 		WinGetPos, x, y, winWidth, winHeight
@@ -242,7 +248,7 @@ return
 		leftMarginOffset := leftMargin - chLeftMargin
 		topMarginOffset := browserTopMargin - chTopMargin
 	} else {
-		show_splash("Clicker Heroes started?")
+		showSplash("Clicker Heroes started?")
 	}
 return
 
@@ -252,7 +258,7 @@ return
 
 ; Abort speed/deep runs and auto ascensions with Alt+Pause
 !Pause::
-	show_splash("Aborting...", 2, 0)
+	showSplash("Aborting...", 2, 0)
 	exitThread = 1
 	exitDRThread = 1
 return
@@ -261,16 +267,16 @@ return
 
 !F1::
 	get_clickable()
-    sleep 8000 ; wait 8s to pick up all coins
-	toggle_mode() ; toggle back to progression mode
+    sleep 8000
+	toggleMode()
 return
 
 !F2::
-	init_run()
+	initRun()
 return
 
 !F3::
-	speed_run()
+	speedRun()
 return
 
 !F4::
@@ -281,18 +287,18 @@ return
 ; Use to farm Hero Souls
 ^F1::
 	keywait, ctrl
-	show_splash("Starting speed runs...", 2, 0)
+	showSplash("Starting speed runs...", 2, 0)
 	loop
 	{
 		get_clickable()
 	    sleep 8000 ; wait 8s to pick up all coins
-		toggle_mode() ; toggle back to progression mode
-		init_run()
+		toggleMode() ; toggle to progression mode
+		initRun()
 		if (activateSkillsAtStart) {
-			activate_skills()
-			activate_edr_skills()
+			activateSkills()
+			activateEdrSkills()
 		}
-		speed_run()
+		speedRun()
 		ascend(autoAscend)
 	}
 return
@@ -302,20 +308,17 @@ return
 ^F2::
 	exitDRThread = 0
 	monsterClicks = 0
+	drDuration := deepRunTime * 60
 	cds := coolDownTime * 60
 
-	show_splash("Starting deep run...", 2, 0)
-	start_progress("Deep Run Progress", 0, deepRunTime * 60 // progressUpdateDelay)
+	showSplash("Starting deep run...", 2, 0)
+	startProgress("Deep Run Progress", 0, drDuration // barUpdateDelay)
 
 	drStartTime := A_TickCount
 
-	fast_mode()
+	fastMode()
 
-	setTimer, endDeepRun, % -deepRunTime * 60 * 1000 ; run only once
-	setTimer, levelUpHero, % lvlUpDelay * 1000
-	if (clickableDelay > 0) {
-		setTimer, hunt4Clickable, % clickableDelay * 1000
-	}
+	setTimer, endDeepRun, % -drDuration * 1000 ; run only once
 	if (cpsTarget > 0) {
 		setTimer, slayMonsters, % 1000 / cpsTarget
 	}
@@ -326,28 +329,30 @@ return
 	{
 		if (mod(A_Index, cds) = 0) {
 			if (toggle) {
-				activate_skills()
-				activate_edr_skills()
+				activateSkills()
+				activateEdrSkills()
 			} else {
-				activate_er_skills()
-				activate_skills()
+				activateErSkills()
+				activateSkills()
 			}
 			toggle := !toggle
 		}
+		if (mod(A_Index, lvlUpDelay) = 0) {
+			ctrlClick(xLvl, yLvl + oLvl, 1, 0)
+		}
+		if (mod(A_Index, clickableDelay) = 0) {
+			get_clickable()
+		}
+		updateProgress(A_Index // barUpdateDelay, drDuration - A_Index)
 		sleep 1000
-		secondsPassed := (A_TickCount - drStartTime) // 1000
-		update_progress(secondsPassed // progressUpdateDelay)
 	}
-	stop_progress()
 
 	setTimer, slayMonsters, off
-	setTimer, hunt4Clickable, off
-	setTimer, levelUpHero, off
 
-	elapsedTime := (A_TickCount - drStartTime) / 1000
-	clicksPerSecond := round(monsterClicks / elapsedTime, 2)
+	clicksPerSecond := round(monsterClicks / secondsSince(drStartTime), 2)
 
-	show_splash("Deep run ended (" . clicksPerSecond . " cps)")
+	stopProgress()
+	showSplash("Deep run ended (" . clicksPerSecond . " cps)")
 return
 
 ; -----------------------------------------------------------------------------------------
@@ -356,13 +361,12 @@ return
 
 ; Level up and upgrade all heroes
 
-init_run()
-{
+initRun() {
 	global
 
-	switch2combat()
+	switchToCombatTab()
 
-	click_(xHero, yHero) ; prevent initial upgrade ctrl_click fails
+	clickPos(xHero, yHero) ; prevent initial upgrade ctrlClick fails
 
 	upgrade(initDownClicks[1],2,,2) ; cid --> brittany
 	upgrade(initDownClicks[2]) ; fisherman --> leon
@@ -372,224 +376,227 @@ init_run()
 	upgrade(initDownClicks[6],,,2) ; beastlord --> shinatobe
 	upgrade(0,,,,,1) ; grant & frostleaf
 
-	buy_available_upgrades()
+	buyAvailableUpgrades()
 }
 
-upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0)
-{
+upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0) {
 	global
 
 	if (!skip) {
-		ctrl_click(xLvl, yLvlInit, cc1)
-		ctrl_click(xLvl, yLvlInit + oLvl, cc2)
+		ctrlClick(xLvl, yLvlInit, cc1)
+		ctrlClick(xLvl, yLvlInit + oLvl, cc2)
 	}
-	ctrl_click(xLvl, yLvlInit + oLvl*2, cc3)
-	ctrl_click(xLvl, yLvlInit + oLvl*3, cc4)
+	ctrlClick(xLvl, yLvlInit + oLvl*2, cc3)
+	ctrlClick(xLvl, yLvlInit + oLvl*3, cc4)
 
-	scroll_down(times)
+	scrollDown(times)
 }
 
 ; All heroes/rangers are expected to "insta-kill" everything at max speed (i.e. around
 ; 7 minutes per 250 levels). Only the last 2-3 minutes should slow down slightly.
-speed_run()
-{
-	global speedRunTime, irisLevel, gildedRanger, lvlThreshold, initDownClicks, progressUpdateDelay
-	global srStartTime := A_TickCount
-	tMax := 7 * 60
-	lMax := 250
+speedRun() {
+	global
 
-	zoneLvl := gildedRanger * lMax + lvlThreshold ; approx zone lvl where we can buy our gilded ranger @ lvl 200
-	lvls := zoneLvl - irisLevel ; lvl's to get there
+	local stints := 2
+	local tMax := 7 * 60
+	local lMax := 250
+	local lvlThreshold := 35 * thresholdFactor
+	local zoneLvl := gildedRanger * lMax + lvlThreshold ; approx zone lvl where we can buy our gilded ranger @ lvl 150
+	local lvls := zoneLvl - irisLevel ; lvl's to get there
+	local midStintTime := 0
 
-	firstStintTime := ceil(lvls * tMax / lMax)
-	lastStintTime := speedRunTime * 60 - firstStintTime
+	if (lvls > lMax) ; add a mid stint if needed
+	{
+		midStintTime := ceil(lMax * tMax / lMax)
+		lvls -= lMax
+		stints += 1
+	}
+	local firstStintTime := ceil(lvls * tMax / lMax)
+	local srDuration := speedRunTime * 60
+	local totalClickDelay := (srDuration // lvlUpDelay) * zzz // 1000
+	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay
 
-	show_splash("Starting speed run...", 2, 0)
-	start_progress("Speed Run Progress", 0, speedRunTime * 60 // progressUpdateDelay)
+	showSplash("Starting speed run...", 2, 0)
 
-	switch2combat()
+	switchToCombatTab()
 
 	if (irisLevel < lMax + lvlThreshold) ; Iris high enough to start with a ranger?
 	{
-		scroll_down(initDownClicks[1])
-		lvlup(firstStintTime, 0, 3) ; nope, let's bridge with Samurai
-		scroll_to_bottom()
+		scrollDown(initDownClicks[1])
+		lvlUp(firstStintTime, 0, 3, 1, stints) ; nope, let's bridge with Samurai
+		scrollToBottom()
 	} else {
-		scroll_to_bottom()
-		lvlup(firstStintTime, 1, 1) ; yes, take whoever is first
-		scroll_way_down(4)
+		scrollToBottom()
+		lvlUp(firstStintTime, 1, 1, 1, stints)
+		scrollWayDown(2)
 	}
-	lvlup(lastStintTime, 1, 2)
+	if (midStintTime) {
+		lvlUp(midStintTime, 1, 2, 2, stints)
+		scrollWayDown(2)
+	}
+	lvlUp(lastStintTime, 1, 2, 2, stints)
 
-	stop_progress()
-	show_splash("Speed run completed.")
+	showSplash("Speed run completed.")
 }
 
-lvlup(seconds, buyUpgrades:=0, button:=1)
-{
+lvlUp(seconds, buyUpgrades, button, stint, stints) {
 	global
 	exitThread = 0
 	local y := yLvl + oLvl * (button - 1)
+	local title := "Speed Run - Leveling Hero " . stint . "/" . stints
 
 	if (buyUpgrades) {
-		ctrl_click(xLvl, y)
-		buy_available_upgrades()
+		ctrlClick(xLvl, y)
+		buyAvailableUpgrades()
 	}
-	max_click(xLvl, y)
+	maxClick(xLvl, y)
 
-	loop % round(seconds/lvlUpDelay) {
-		ctrl_click(xLvl, y)
-		sleep % lvlUpDelay * 1000 - zzz ; compensate for the click delay
+	startProgress(title, 0, seconds // barUpdateDelay)
+	loop % seconds
+	{
+		if (mod(A_Index, lvlUpDelay) = 0) {
+			ctrlClick(xLvl, y)
+		}
+		updateProgress(A_Index // barUpdateDelay, seconds - A_Index)
 		if (exitThread) {
-			stop_progress()
-			show_splash("Speed run aborted!")
+			stopProgress()
+			showSplash("Speed run aborted!")
 			exit
 		}
-		secondsPassed := (A_TickCount - srStartTime) // 1000
-		update_progress(secondsPassed // progressUpdateDelay)
+		sleep 1000
 	}
+	stopProgress()
 }
 
-ascend(autoYes:=0)
-{
+ascend(autoYes:=0) {
 	global
 	exitThread = 0
 	local y = yAsc - 3 * buttonSize
 
 	if (autoYes) {
-		show_splash("10 seconds till ASCENSION! (Abort with Alt+Pause)", 10, 2)
+		showSplash("10 seconds till ASCENSION! (Abort with Alt+Pause)", 10, 2)
 		if (exitThread) {
-			show_splash("Ascension aborted!")
+			showSplash("Ascension aborted!")
 			exit
 		}
 	} else {
-		play_warning_sound()
+		playWarningSound()
 		msgbox, 4,,Salvage Junk Pile & Ascend?
 		ifmsgbox no
 			exit
 	}
 
-	salvage_junk_pile() ; must salvage junk relics before ascending
+	salvageJunkPile() ; must salvage junk relics before ascending
 
-	switch2combat()
+	switchToCombatTab()
 
-	scroll_down(ascDownClicks)
+	scrollDown(ascDownClicks)
 	sleep % zzz * 2
 
 	; Scrolling is not an exact science, hence we click above, center and below
 	loop 9
 	{
-		click_(xAsc, y)
+		clickPos(xAsc, y)
 		y := y + buttonSize
 	}
 	sleep % zzz * 4
-	click_(xYes, yYes)
+	clickPos(xYes, yYes)
 	sleep % zzz * 2
 }
 
-salvage_junk_pile()
-{
+salvageJunkPile() {
 	global
 
-	switch2relic()
-	click_(xSalvageJunk, ySalvageJunk)
+	switchToRelicTab()
+	clickPos(xSalvageJunk, ySalvageJunk)
 	sleep % zzz * 4
-	click_(xDestroyYes, yDestroyYes)
+	clickPos(xDestroyYes, yDestroyYes)
 	sleep % zzz * 2
 }
 
-switch2relic()
-{
+switchToRelicTab() {
 	global
-	click_(xRelicTab, yRelicTab)
+	clickPos(xRelicTab, yRelicTab)
 	sleep % zzz * 2
 }
 
-switch2combat()
-{
+switchToCombatTab() {
 	global
-	click_(xCombatTab, yCombatTab)
+	clickPos(xCombatTab, yCombatTab)
 	sleep % zzz * 4
 }
 
-buy_available_upgrades() {
+buyAvailableUpgrades() {
 	global
-	scroll_to_bottom()
-	click_(xBuy, yBuy)
+	scrollToBottom()
+	clickPos(xBuy, yBuy)
 	sleep % zzz * 3
 }
 
-scroll_up(clickCount:=1) {
+scrollUp(clickCount:=1) {
 	global
-	fast_mode()
-	click_(xScroll, yUp, clickCount)
-	slow_mode()
+	fastMode()
+	clickPos(xScroll, yUp, clickCount)
+	slowMode()
 	sleep % zzz * 2
 }
 
-scroll_down(clickCount:=1) {
+scrollDown(clickCount:=1) {
 	global
-	fast_mode()
-	click_(xScroll, yDown, clickCount)
-	slow_mode()
+	fastMode()
+	clickPos(xScroll, yDown, clickCount)
+	slowMode()
 	sleep % zzz * 2
 }
 
 ; Scroll down fix when at bottom and scroll bar don't update correctly
-scroll_way_down(clickCount:=1) {
-	scroll_up()
-	scroll_down(clickCount + 1)
+scrollWayDown(clickCount:=1) {
+	scrollUp()
+	scrollDown(clickCount + 1)
 }
 
-scroll_to_top()
-{
+scrollToTop() {
 	global
-	scroll_up(top2BottomClicks)
+	scrollUp(top2BottomClicks)
 	sleep % 1000 - zzz
 }
 
-scroll_to_bottom()
-{
+scrollToBottom() {
 	global
-	scroll_down(top2BottomClicks)
+	scrollDown(top2BottomClicks)
 	sleep % 1000 - zzz
 }
 
-max_click(xCoord, yCoord)
-{
+maxClick(xCoord, yCoord) {
 	global
 	ControlSend,, {shift down}{q down}, % winName
-	click_(xCoord, yCoord, clickCount)
+	clickPos(xCoord, yCoord, clickCount)
 	ControlSend,, {q up}{shift up}, % winName
 	sleep % zzz
 }
 
-ctrl_click(xCoord, yCoord, clickCount:=1, sleepSome:=1)
-{
+ctrlClick(xCoord, yCoord, clickCount:=1, sleepSome:=1) {
 	global
 	ControlSend,, {ctrl down}, % winName
-	click_(xCoord, yCoord, clickCount)
+	clickPos(xCoord, yCoord, clickCount)
 	ControlSend,, {ctrl up}, % winName
 	if (sleepSome) {
 		sleep % zzz
 	}
 }
 
-click_(xCoord, yCoord, clickCount:=1)
-{
+clickPos(xCoord, yCoord, clickCount:=1) {
 	global
 	ControlClick,% "x" xCoord+leftMarginOffset " y" yCoord+topMarginOffset,% winName,,,% clickCount,Pos
 }
 
 ; Toggle between farm and progression modes
-toggle_mode()
-{
+toggleMode() {
 	global
 	ControlSend,, {a down}{a up}, % winName
 }
 
-activate_skills()
-{
+activateSkills() {
 	global
 	ControlSend,, {1 down}{1 up}, % winName ; clickstorm
 	ControlSend,, {2 down}{2 up}, % winName ; powersurge
@@ -599,59 +606,68 @@ activate_skills()
 	ControlSend,, {7 down}{7 up}, % winName ; super clicks
 }
 
-activate_edr_skills()
-{
+activateEdrSkills() {
 	global
 	ControlSend,, {8 down}{8 up}, % winName ; energize
 	ControlSend,, {6 down}{6 up}, % winName ; dark ritual
 	ControlSend,, {9 down}{9 up}, % winName ; reload
 }
 
-activate_er_skills()
-{
+activateErSkills() {
 	global
 	ControlSend,, {8 down}{8 up}, % winName ; energize
 	ControlSend,, {9 down}{9 up}, % winName ; reload
 }
 
-play_warning_sound()
-{
+playWarningSound() {
 	SoundPlay, %A_WinDir%\Media\tada.wav
 }
 
-show_splash(text, seconds:=5, sound:=1)
-{
+showSplash(text, seconds:=5, sound:=1) {
 	splashtexton,200,40,Auto-clicker,%text%
 	if (sound = 1) {
 		SoundPlay, %A_WinDir%\Media\Windows User Account Control.wav
 	} else if (sound = 2) {
-		play_warning_sound()
+		playWarningSound()
 	}
 	sleep % seconds * 1000
 	splashtextoff
 }
 
-start_progress(title, min:=0, max:=100)
-{
+startProgress(title, min:=0, max:=100) {
 	gui, new
 	gui, margin, 0, 0
-	gui, add, progress,% "w300 h30 range" min "-" max " -smooth vRunProgress"
+	gui, font, s18
+	gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
+	gui, add, text, w92 vProgressBarTime x+2
 	gui, show, x20 y20,% title
 }
 
-update_progress(position) {
-	guicontrol,, RunProgress,% position
+updateProgress(position, remainingTime) {
+	guicontrol,, ProgressBar,% position
+	guicontrol,, ProgressBarTime,% formatSeconds(remainingTime)
 }
 
-stop_progress() {
+stopProgress() {
 	gui, destroy
 }
 
-fast_mode() {
+formatSeconds(s) {
+    time = 19990101 ; *Midnight* of an arbitrary date.
+    time += %s%, seconds
+	FormatTime, timeStr, %time%, HH:mm:ss
+    return timeStr
+}
+
+secondsSince(startTime) {
+	return (A_TickCount - startTime) // 1000
+}
+
+fastMode() {
 	SetControlDelay, -1
 }
 
-slow_mode() {
+slowMode() {
 	SetControlDelay, 20
 }
 
@@ -663,15 +679,7 @@ endDeepRun:
 	exitDRThread = 1
 return
 
-levelUpHero:
-	ctrl_click(xLvl, yLvl + oLvl, 1, 0)
-return
-
-hunt4Clickable:
-	get_clickable()
-return
-
 slayMonsters:
-	click_(xMonster, yMonster)
+	clickPos(xMonster, yMonster)
 	monsterClicks++
 return
