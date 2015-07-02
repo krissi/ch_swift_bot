@@ -102,7 +102,7 @@ thresholdFactor = 1 ; 0, 1 or 2
 activateSkillsAtStart = 0
 
 ; Added flag for v0.19.
-autoAscend = 1 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
+autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
 
 ; -- Deep run -----------------------------------------------------------------------------
 
