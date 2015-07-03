@@ -1,6 +1,5 @@
 ; -----------------------------------------------------------------------------------------
-; Clicker Heroes HS Speed Farmer
-; v1.8
+; Clicker Heroes Sw1ft Bot
 ; by Sw1ftb
 
 ; Note that this bot is not intended for the early game!
@@ -47,6 +46,9 @@ Thread, interrupt, 0
 
 winName=Clicker Heroes
 
+botName=CH Sw1ft Bot
+botVersion=1.81
+
 global ProgressBar, ProgressBarTime ; progress bar controls
 
 exitThread = 0
@@ -82,9 +84,13 @@ topMarginOffset = 0
 ; This is the base setting for how fast or slow the script will run.
 ; 200 is a safe setting. Anything lower than 150 is on your own risk!
 zzz = 200 ; sleep delay (in ms) after a click
-
 lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
-barUpdateDelay = 30
+barUpdateDelay = 30 ; time (in seconds) between progress bar updates
+
+; true or false
+global showSplashTexts = true
+global showProgressBar = true
+global playSounds = true
 
 ; -- Speed run ----------------------------------------------------------------------------
 
@@ -99,10 +105,14 @@ gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starti
 ; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
 thresholdFactor = 1 ; 0, 1 or 2
 
-activateSkillsAtStart = 0
+activateSkillsAtStart = 1
+
+hybridMode = 0 ; chain a deep run when the speed run finish
 
 ; Added flag for v0.19.
 autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
+
+nextHeroDelay = 5 ; extra gold farm delay (in seconds) between heroes
 
 ; -- Deep run -----------------------------------------------------------------------------
 
@@ -110,7 +120,7 @@ deepRunTime = 30 ; minutes
 coolDownTime = 15 ; assuming Vaagur lvl 15
 clickableDelay = 30 ; hunt for a clickable every 30s (set to 0 to stop hunting)
 
-; If you want a stable run, I strongly recommend using an external auto-clicker.
+; If you want a stable long deep run, I strongly recommend using an external auto-clicker.
 cpsTarget = 25 ; monster clicks per second (0 for external) 
 
 ; -- Coordinates --------------------------------------------------------------------------
@@ -143,9 +153,9 @@ yLvlInit = 240
 ; Ascension button settings
 ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible (after a full speed run)
 xAsc = 310
-yAsc = 468
+yAsc = 409
 
-buttonSize = 34
+buttonSize = 35
 
 ; Ascend Yes button
 xYes = 500
@@ -229,7 +239,7 @@ return
 
 ; Reload script with Alt+F5
 !F5::
-	showSplash("Reloading...", 2, 0)
+	showSplash("Reloading...", 1)
 	Reload
 return
 
@@ -239,7 +249,7 @@ return
 
 	IfWinExist, % winName
 	{
-		showSplash("Calculating browser offsets...")
+		showSplash("Calculating browser offsets...", 1)
 
 		WinActivate
 		WinGetPos, x, y, winWidth, winHeight
@@ -248,7 +258,7 @@ return
 		leftMarginOffset := leftMargin - chLeftMargin
 		topMarginOffset := browserTopMargin - chTopMargin
 	} else {
-		showSplash("Clicker Heroes started?")
+		showSplash("Clicker Heroes started in browser?",3,2)
 	}
 return
 
@@ -258,7 +268,7 @@ return
 
 ; Abort speed/deep runs and auto ascensions with Alt+Pause
 !Pause::
-	showSplash("Aborting...", 2, 0)
+	showSplash("Aborting...")
 	exitThread = 1
 	exitDRThread = 1
 return
@@ -287,7 +297,8 @@ return
 ; Use to farm Hero Souls
 ^F1::
 	keywait, ctrl
-	showSplash("Starting speed runs...", 2, 0)
+	mode := hybridMode ? "hybrid" : "speed"
+	showSplash("Starting " . mode . " runs...")
 	loop
 	{
 		get_clickable()
@@ -299,6 +310,9 @@ return
 			activateEdrSkills()
 		}
 		speedRun()
+		if (hybridMode) {
+			deepRun()
+		}
 		ascend(autoAscend)
 	}
 return
@@ -306,53 +320,8 @@ return
 ; Deep run.
 ; Use (after a speed run) to get a few new gilds every now and then
 ^F2::
-	exitDRThread = 0
-	monsterClicks = 0
-	drDuration := deepRunTime * 60
-	cds := coolDownTime * 60
-
-	showSplash("Starting deep run...", 2, 0)
-	startProgress("Deep Run Progress", 0, drDuration // barUpdateDelay)
-
-	drStartTime := A_TickCount
-
-	fastMode()
-
-	setTimer, endDeepRun, % -drDuration * 1000 ; run only once
-	if (cpsTarget > 0) {
-		setTimer, slayMonsters, % 1000 / cpsTarget
-	}
-
-	toggle = true
-
-	while(!exitDRThread)
-	{
-		if (mod(A_Index, cds) = 0) {
-			if (toggle) {
-				activateSkills()
-				activateEdrSkills()
-			} else {
-				activateErSkills()
-				activateSkills()
-			}
-			toggle := !toggle
-		}
-		if (mod(A_Index, lvlUpDelay) = 0) {
-			ctrlClick(xLvl, yLvl + oLvl, 1, 0)
-		}
-		if (mod(A_Index, clickableDelay) = 0) {
-			get_clickable()
-		}
-		updateProgress(A_Index // barUpdateDelay, drDuration - A_Index)
-		sleep 1000
-	}
-
-	setTimer, slayMonsters, off
-
-	clicksPerSecond := round(monsterClicks / secondsSince(drStartTime), 2)
-
-	stopProgress()
-	showSplash("Deep run ended (" . clicksPerSecond . " cps)")
+	keywait, ctrl
+	deepRun()
 return
 
 ; -----------------------------------------------------------------------------------------
@@ -415,9 +384,9 @@ speedRun() {
 	local firstStintTime := ceil(lvls * tMax / lMax)
 	local srDuration := speedRunTime * 60
 	local totalClickDelay := (srDuration // lvlUpDelay) * zzz // 1000
-	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay
+	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay - nextHeroDelay * stints
 
-	showSplash("Starting speed run...", 2, 0)
+	showSplash("Starting speed run...")
 
 	switchToCombatTab()
 
@@ -440,11 +409,66 @@ speedRun() {
 	showSplash("Speed run completed.")
 }
 
+deepRun() {
+	global
+
+	exitDRThread = 0
+	monsterClicks = 0
+	local drDuration := deepRunTime * 60
+	local cds := coolDownTime * 60
+
+	showSplash("Starting deep run...")
+	startProgress("Deep Run Progress", 0, drDuration // barUpdateDelay)
+
+	local drStartTime := A_TickCount
+
+	fastMode()
+
+	setTimer, endDeepRun, % -drDuration * 1000 ; run only once
+	if (cpsTarget > 0) {
+		setTimer, slayMonsters, % 1000 / cpsTarget
+	}
+
+	local toggle = true
+
+	while(!exitDRThread)
+	{
+		if (mod(A_Index, cds) = 0) {
+			if (toggle) {
+				activateSkills()
+				activateEdrSkills()
+			} else {
+				activateErSkills()
+				activateSkills()
+			}
+			toggle := !toggle
+		}
+		if (mod(A_Index, lvlUpDelay) = 0) {
+			ctrlClick(xLvl, yLvl + oLvl, 1, 0)
+		}
+		if (clickableDelay > 0 and !hybridMode) {
+			if (mod(A_Index, clickableDelay) = 0) {
+				get_clickable()
+			}
+		}
+		updateProgress(A_Index // barUpdateDelay, drDuration - A_Index)
+		sleep 1000
+	}
+
+	setTimer, slayMonsters, off
+
+	local clicksPerSecond := round(monsterClicks / secondsSince(drStartTime), 2)
+
+	stopProgress()
+	showSplash("Deep run ended (" . clicksPerSecond . " cps)", 5)
+}
+
 lvlUp(seconds, buyUpgrades, button, stint, stints) {
 	global
+
 	exitThread = 0
 	local y := yLvl + oLvl * (button - 1)
-	local title := "Speed Run - Leveling Hero " . stint . "/" . stints
+	local title := "Speed Run Progress (" . stint . "/" . stints . ")"
 
 	if (buyUpgrades) {
 		ctrlClick(xLvl, y)
@@ -498,7 +522,7 @@ ascend(autoYes:=0) {
 	loop 9
 	{
 		clickPos(xAsc, y)
-		y := y + buttonSize
+		y += buttonSize
 	}
 	sleep % zzz * 4
 	clickPos(xYes, yYes)
@@ -552,8 +576,10 @@ scrollDown(clickCount:=1) {
 
 ; Scroll down fix when at bottom and scroll bar don't update correctly
 scrollWayDown(clickCount:=1) {
+	global
 	scrollUp()
 	scrollDown(clickCount + 1)
+	sleep % nextHeroDelay * 1000
 }
 
 scrollToTop() {
@@ -621,13 +647,24 @@ activateErSkills() {
 }
 
 playWarningSound() {
-	SoundPlay, %A_WinDir%\Media\tada.wav
+	if (playSounds) {
+		SoundPlay, %A_WinDir%\Media\tada.wav
+	}
 }
 
-showSplash(text, seconds:=5, sound:=1) {
-	splashtexton,200,40,Auto-clicker,%text%
-	if (sound = 1) {
+playNotificationSound() {
+	if (playSounds) {
 		SoundPlay, %A_WinDir%\Media\Windows User Account Control.wav
+	}
+}
+
+showSplash(text, seconds:=2, sound:=1) {
+	global
+	if (showSplashTexts) {
+		splashtexton,200,40,% botName " v" botVersion,%text%
+	}
+	if (sound = 1) {
+		playNotificationSound()
 	} else if (sound = 2) {
 		playWarningSound()
 	}
@@ -636,21 +673,28 @@ showSplash(text, seconds:=5, sound:=1) {
 }
 
 startProgress(title, min:=0, max:=100) {
-	gui, new
-	gui, margin, 0, 0
-	gui, font, s18
-	gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
-	gui, add, text, w92 vProgressBarTime x+2
-	gui, show, x20 y20,% title
+	global
+	if (showProgressBar) {
+		gui, new
+		gui, margin, 0, 0
+		gui, font, s18
+		gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
+		gui, add, text, w92 vProgressBarTime x+2
+		gui, show, x20 y20,% botName " - " title
+	}
 }
 
 updateProgress(position, remainingTime) {
-	guicontrol,, ProgressBar,% position
-	guicontrol,, ProgressBarTime,% formatSeconds(remainingTime)
+	if (showProgressBar) {
+		guicontrol,, ProgressBar,% position
+		guicontrol,, ProgressBarTime,% formatSeconds(remainingTime)
+	}
 }
 
 stopProgress() {
-	gui, destroy
+	if (showProgressBar) {
+		gui, destroy
+	}
 }
 
 formatSeconds(s) {
