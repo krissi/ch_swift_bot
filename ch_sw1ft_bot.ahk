@@ -9,6 +9,8 @@
 
 ; How to get millions of Hero Souls?
 
+; Search for (*) to find the most important initial settings.
+
 ; 1. Select Steam or browser support with the SetTitleMatchMode parameter.
 ; - If Steam, make sure you run in windowed mode at default size (1136 x 640).
 ; - If browser, follow the instructions below for setting the correct top margin.
@@ -23,18 +25,18 @@
 ; 6. Now click Alt+F4 to manually restart the ascend function.
 ;    Before hitting Yes to continue, verify that your junk pile is ok to salvage.
 ; 7. If the script managed to salvage and ascend successfully, then everything is now operational.
-;
+
 ; Options you might want to change:
 ; * speedRunTime - depending on the end zone lvl you aim at, adjust as needed
 ; * activateSkillsAtStart - if you do longer runs (>35 minutes), you might benefit from the energize + dark ritual dps bonus
 ; * autoAscend - for those over night farm sessions
-;
+
 ; If you can speed run to 1700 or above (in less than 30 minutes) and have a hybrid build (with Bhaal, Frag, 
 ; Jugg and co.), you might want to try the Deep run option. It is designed to start off where a speed run 
 ; finish and will only lvl up the same ranger till the end. Just set the deepRunTime duration and hit Ctrl+F2.
-;
+
 ; Note that you must reload the script with Alt+F5 (and Alt+F6 if you run in a browser) for any change to take effect.
-;
+
 ; At any given time, you can pause the script with the Pause button, or abort a run with Alt+Pause.
 
 ; -----------------------------------------------------------------------------------------
@@ -47,14 +49,14 @@ Thread, interrupt, 0
 winName=Clicker Heroes
 
 botName=CH Sw1ft Bot
-botVersion=1.81
+botVersion=1.82
 
 global ProgressBar, ProgressBarTime ; progress bar controls
 
 exitThread = 0
 exitDRThread = 0
 
-SetTitleMatchMode, 3 ; Steam (3) or browser (regex) version?
+SetTitleMatchMode, 3 ; Steam (3) or browser (regex) version? (*)
 
 ; If browser, you need to verify (or adjust) this top margin setting:
 browserTopMargin = 230 ; Chrome (222), Firefox (230), IE (198)
@@ -79,11 +81,12 @@ topMarginOffset = 0
 ; -- Configuration
 ; -----------------------------------------------------------------------------------------
 
-; In Clicker Heroes, turn off the "Show relic found popups" option.
+; In Clicker Heroes, turn off the "Show relic found popups" option. (*)
 
 ; This is the base setting for how fast or slow the script will run.
 ; 200 is a safe setting. Anything lower than 150 is on your own risk!
 zzz = 200 ; sleep delay (in ms) after a click
+
 lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
 barUpdateDelay = 30 ; time (in seconds) between progress bar updates
 
@@ -97,10 +100,10 @@ global playSounds = true
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 
 speedRunTime = 30 ; minutes
-irisLevel = 1013 ; try to keep your Iris within 1000 levels of your optimal zone lvl
+irisLevel = 1024 ; try to keep your Iris within 1000 levels of your optimal zone lvl (*)
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
-gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starting the run.
+gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starting the run. (*)
 
 ; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
 thresholdFactor = 1 ; 0, 1 or 2
@@ -112,16 +115,19 @@ hybridMode = 0 ; chain a deep run when the speed run finish
 ; Added flag for v0.19.
 autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
 
+coinPickUpDelay = 7 ; seconds
 nextHeroDelay = 5 ; extra gold farm delay (in seconds) between heroes
 
 ; -- Deep run -----------------------------------------------------------------------------
 
-deepRunTime = 30 ; minutes
+deepRunTime = 60 ; minutes
 coolDownTime = 15 ; assuming Vaagur lvl 15
 clickableDelay = 30 ; hunt for a clickable every 30s (set to 0 to stop hunting)
 
-; If you want a stable long deep run, I strongly recommend using an external auto-clicker.
-cpsTarget = 25 ; monster clicks per second (0 for external) 
+cpsTarget = 25 ; monster clicks per second
+
+; If you want a stable long deep run, I strongly recommend using the external monster clicker script.
+useExternalClicker = 1
 
 ; -- Coordinates --------------------------------------------------------------------------
 
@@ -135,7 +141,7 @@ oLvl = 107 ; offset to next button
 ; Approximate Iris lvl thresholds that affect the scroll bar:
 ; 260 (Atlas), 510 (Terra), 760 (Phthalo), 1010 (Banana), 1260 (Lilin)
 
-; initRun function settings
+; initRun function settings (*)
 initDownClicks :=  [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
@@ -143,6 +149,7 @@ initDownClicks :=  [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes 
 yLvlInit = 240
 
 ; After an ascend plus (non-idle) clickable, who's at the bottom? Suggested settings:
+; Cadmia       ???
 ; Lilin        [6,6,6,6,6,3], 285
 ; Banana       [6,7,6,7,6,3], 240
 ; Phthalo      [6,7,7,6,7,3], 273
@@ -150,7 +157,7 @@ yLvlInit = 240
 ; Atlas        [7,7,7,8,7,3], 273
 ; Dread Knight [7,8,7,8,7,4], 257
 
-; Ascension button settings
+; Ascension button settings (*)
 ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible (after a full speed run)
 xAsc = 310
 yAsc = 409
@@ -179,6 +186,9 @@ yUp = 220
 yDown = 650
 top2BottomClicks = 50
 
+xProgressBar = 20 ; -420 for monitor 2
+yProgressBar = 20
+
 ; Buy Available Upgrades button
 xBuy = 300
 yBuy = 580
@@ -189,6 +199,12 @@ yHero = 229
 xMonster = 860
 yMonster = 420
 
+; Tab safety zone (script will pause when entering)
+xSafetyZoneL = 7
+xSafetyZoneR = 425
+ySafetyZoneT = 104
+ySafetyZoneB = 154
+
 ; No smart image recognition, so we click'em all!
 get_clickable()
 {
@@ -196,7 +212,6 @@ get_clickable()
 	; Break idle on purpose to get the same amount of gold every run
 	clickPos(xMonster, yMonster)
 	clickPos(xMonster, yMonster)
-	sleep 1000
     clickPos(524, 487)
     clickPos(747, 431)
     clickPos(755, 480)
@@ -210,7 +225,7 @@ get_clickable()
 ; -- Hotkeys (+=Shift, !=Alt, ^=Ctrl)
 ; -----------------------------------------------------------------------------------------
 
-; Quick initial tests:
+; (*) Quick initial tests:
 ; Shift+F1 should scroll down to the bottom and lvl up the top hero
 ; Shift+F2 should lvl up the wandering fisherman
 ; Shift+F3 should switch to the relics tab and then back
@@ -257,6 +272,11 @@ return
 		leftMargin := (winWidth - chWidth) // 2
 		leftMarginOffset := leftMargin - chLeftMargin
 		topMarginOffset := browserTopMargin - chTopMargin
+
+		xSafetyZoneL += leftMarginOffset
+		xSafetyZoneR += leftMarginOffset
+		ySafetyZoneT += topMarginOffset
+		ySafetyZoneB += topMarginOffset
 	} else {
 		showSplash("Clicker Heroes started in browser?",3,2)
 	}
@@ -277,7 +297,7 @@ return
 
 !F1::
 	get_clickable()
-    sleep 8000
+    sleep % coinPickUpDelay * 1000
 	toggleMode()
 return
 
@@ -302,7 +322,7 @@ return
 	loop
 	{
 		get_clickable()
-	    sleep 8000 ; wait 8s to pick up all coins
+	    sleep % coinPickUpDelay * 1000
 		toggleMode() ; toggle to progression mode
 		initRun()
 		if (activateSkillsAtStart) {
@@ -418,6 +438,8 @@ deepRun() {
 	local cds := coolDownTime * 60
 
 	showSplash("Starting deep run...")
+
+	startMouseMonitoring()
 	startProgress("Deep Run Progress", 0, drDuration // barUpdateDelay)
 
 	local drStartTime := A_TickCount
@@ -425,7 +447,10 @@ deepRun() {
 	fastMode()
 
 	setTimer, endDeepRun, % -drDuration * 1000 ; run only once
-	if (cpsTarget > 0) {
+
+	if (useExternalClicker) {
+		send {blind}{shift down}{f6}{shift up}
+	} else {
 		setTimer, slayMonsters, % 1000 / cpsTarget
 	}
 
@@ -455,12 +480,19 @@ deepRun() {
 		sleep 1000
 	}
 
-	setTimer, slayMonsters, off
+	if (useExternalClicker) {
+		send {blind}{shift down}{f7}{shift up}
+	} else {
+		setTimer, slayMonsters, off
+	}
 
 	local clicksPerSecond := round(monsterClicks / secondsSince(drStartTime), 2)
 
 	stopProgress()
-	showSplash("Deep run ended (" . clicksPerSecond . " cps)", 5)
+	stopMouseMonitoring()
+
+	cpsText := !useExternalClicker ? " (" . clicksPerSecond . " cps)." : "."
+	showSplash("Deep run ended" . cpsText, 5)
 }
 
 lvlUp(seconds, buyUpgrades, button, stint, stints) {
@@ -469,6 +501,8 @@ lvlUp(seconds, buyUpgrades, button, stint, stints) {
 	exitThread = 0
 	local y := yLvl + oLvl * (button - 1)
 	local title := "Speed Run Progress (" . stint . "/" . stints . ")"
+
+	startMouseMonitoring()
 
 	if (buyUpgrades) {
 		ctrlClick(xLvl, y)
@@ -485,12 +519,14 @@ lvlUp(seconds, buyUpgrades, button, stint, stints) {
 		updateProgress(A_Index // barUpdateDelay, seconds - A_Index)
 		if (exitThread) {
 			stopProgress()
+			stopMouseMonitoring()
 			showSplash("Speed run aborted!")
 			exit
 		}
 		sleep 1000
 	}
 	stopProgress()
+	stopMouseMonitoring()
 }
 
 ascend(autoYes:=0) {
@@ -680,7 +716,7 @@ startProgress(title, min:=0, max:=100) {
 		gui, font, s18
 		gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
 		gui, add, text, w92 vProgressBarTime x+2
-		gui, show, x20 y20,% botName " - " title
+		gui, show,% "x" xProgressBar " y" yProgressBar,% botName " - " title
 	}
 }
 
@@ -716,6 +752,14 @@ slowMode() {
 	SetControlDelay, 20
 }
 
+startMouseMonitoring() {
+	setTimer, checkMousePosition, 250
+}
+
+stopMouseMonitoring() {
+	setTimer, checkMousePosition, off
+}
+
 ; -----------------------------------------------------------------------------------------
 ; -- Subroutines
 ; -----------------------------------------------------------------------------------------
@@ -727,4 +771,16 @@ return
 slayMonsters:
 	clickPos(xMonster, yMonster)
 	monsterClicks++
+return
+
+checkMousePosition:
+	MouseGetPos,,, window
+	if (window = WinExist(winName)) {
+		WinActivate
+		MouseGetPos, x, y
+		if (x > xSafetyZoneL && x < xSafetyZoneR && y > ySafetyZoneT && y < ySafetyZoneB) {
+			playNotificationSound()
+			msgbox,,% botName " v" botVersion,Click safety pause engaged. Continue?
+		}
+	}
 return
