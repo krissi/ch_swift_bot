@@ -49,7 +49,7 @@ Thread, interrupt, 0
 winName=Clicker Heroes
 
 botName=CH Sw1ft Bot
-botVersion=1.82
+botVersion=1.83
 
 global ProgressBar, ProgressBarTime ; progress bar controls
 
@@ -100,7 +100,7 @@ global playSounds = true
 ; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
 
 speedRunTime = 30 ; minutes
-irisLevel = 1024 ; try to keep your Iris within 1000 levels of your optimal zone lvl (*)
+irisLevel = 1064 ; try to keep your Iris within 1000 levels of your optimal zone lvl (*)
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
 gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starting the run. (*)
@@ -142,7 +142,7 @@ oLvl = 107 ; offset to next button
 ; 260 (Atlas), 510 (Terra), 760 (Phthalo), 1010 (Banana), 1260 (Lilin)
 
 ; initRun function settings (*)
-initDownClicks :=  [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
+initDownClicks := [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
 ; Trial run with Alt+F2. Tip: If things move to fast, temporarily increase the zzz parameter to slow down the script.
@@ -196,7 +196,7 @@ yBuy = 580
 xHero = 474
 yHero = 229
 
-xMonster = 860
+xMonster = 1120
 yMonster = 420
 
 ; Tab safety zone (script will pause when entering)
@@ -418,7 +418,7 @@ speedRun() {
 	} else {
 		scrollToBottom()
 		lvlUp(firstStintTime, 1, 1, ++stint, stints)
-		scrollWayDown(2)
+		scrollWayDown(3)
 	}
 	if (midStintTime) {
 		lvlUp(midStintTime, 1, 2, ++stint, stints)
@@ -716,7 +716,7 @@ startProgress(title, min:=0, max:=100) {
 		gui, font, s18
 		gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
 		gui, add, text, w92 vProgressBarTime x+2
-		gui, show,% "x" xProgressBar " y" yProgressBar,% botName " - " title
+		gui, show,% "na x" xProgressBar " y" yProgressBar,% botName " - " title
 	}
 }
 

@@ -1,6 +1,6 @@
-; -----------------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------------------------------
 ; Clicker Heroes Monster Clicker
-; v1.0
+; v1.01
 ; by Sw1ftb
 
 ; Shift+F6 to start
@@ -9,7 +9,8 @@
 
 ; Built in click speed throttle when moving mouse cursor inside the Clicker Heroes window.
 
-; -----------------------------------------------------------------------------------------
+; Note that the Shop window will block all clicking, so be careful not to loose your Juggernaut combo!
+; -----------------------------------------------------------------------------------------------------
 
 #Persistent
 #NoEnv
@@ -22,7 +23,7 @@ SetTitleMatchMode, 3 ; Steam (3) or browser (regex) version?
 winName=Clicker Heroes
 ; winName=Lvl.*Clicker Heroes.*
 
-xMonster = 860
+xMonster = 1120
 yMonster = 420
 
 short := 21 ; ms
