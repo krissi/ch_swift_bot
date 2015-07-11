@@ -2,154 +2,85 @@
 ; Clicker Heroes Sw1ft Bot
 ; by Sw1ftb
 
-; Note that this bot is not intended for the early game!
-; It assumes that your Iris ancient level is high enough to (after an ascension + clickable)
-; instantly unlock and level all heroes, including Frostleaf, to 100 and buy all upgrades.
-; The goal is to speed run around 1000 levels (starting from your Iris level) in 30-35 minutes and then restart.
+; Script home @ http://redd.it/3a3bmy
 
-; How to get millions of Hero Souls?
+; Quick start guide:
 
-; Search for (*) to find the most important initial settings.
+; 1. Read the 1st half of the FAQ @ http://pastebin.com/awy9p847
+; 2. Follow the instructions in the mandatory configuration section.
+; 3. Read the 2nd half of the FAQ.
 
-; 1. Select Steam or browser support with the SetTitleMatchMode parameter.
-; - If Steam, make sure you run in windowed mode at default size (1136 x 640).
-; - If browser, follow the instructions below for setting the correct top margin.
-; 2. Scroll down to the Hotkeys section and run the "Quick initial tests".
-; 3. If those works, go back up and adjust the Coordinates > initRun function settings.
-;    Some tinkering might be needed if you are at a later stage in the game than me.
-; 4. When that bit work, go back up and configure your Speed run.
-;    Adjust the irisLevel and gildedRanger settings. Leave the rest as is and hit Ctrl+F1!
-;    Important! The script assumes that you have just ascended with a "clickable" available and in Farm Mode.
-; 5. If everything works you should end up with a "Salvage Junk Pile & Ascend?" question after ~30 minutes.
-;    Answer No, then find the Coordinates > Ascension button settings and adjust if needed.
-; 6. Now click Alt+F4 to manually restart the ascend function.
-;    Before hitting Yes to continue, verify that your junk pile is ok to salvage.
-; 7. If the script managed to salvage and ascend successfully, then everything is now operational.
-
-; Options you might want to change:
+; Commonly changed optional settings:
 ; * speedRunTime - depending on the end zone lvl you aim at, adjust as needed
-; * activateSkillsAtStart - if you do longer runs (>35 minutes), you might benefit from the energize + dark ritual dps bonus
 ; * autoAscend - for those over night farm sessions
 
 ; If you can speed run to 1700 or above (in less than 30 minutes) and have a hybrid build (with Bhaal, Frag, 
 ; Jugg and co.), you might want to try the Deep run option. It is designed to start off where a speed run 
 ; finish and will only lvl up the same ranger till the end. Just set the deepRunTime duration and hit Ctrl+F2.
 
-; Note that you must reload the script with Alt+F5 (and Alt+F6 if you run in a browser) for any change to take effect.
+; Main Hotkeys:
 
-; At any given time, you can pause the script with the Pause button, or abort a run with Alt+Pause.
+; Ctrl+F1 to loop speed runs
+; Ctrl+F2 to start a deep run
+; Pause to pause/unpause the script at any time
+; Alt+Pause to abort runs (or an auto ascension)
+; Alt+F5 to reload the script
+
+; See the Hotkeys section for all available commands.
 
 ; -----------------------------------------------------------------------------------------
 
 #Persistent
 #NoEnv
 #InstallKeybdHook
-Thread, interrupt, 0
 
-winName=Clicker Heroes
+#Include ch_bot_lib.ahk
 
-botName=CH Sw1ft Bot
-botVersion=1.83
-
-global ProgressBar, ProgressBarTime ; progress bar controls
-
-exitThread = 0
-exitDRThread = 0
-
-SetTitleMatchMode, 3 ; Steam (3) or browser (regex) version? (*)
-
-; If browser, you need to verify (or adjust) this top margin setting:
-browserTopMargin = 230 ; Chrome (222), Firefox (230), IE (198)
-
-; Start the script, then:
-; Alt+Middle Mouse Button the top edge of the CH area (below the logo) to get the coordinate.
-; When done, reload the script with Alt+F5 and calculate browser offsets with Alt+F6.
-
-; Note that Chrome steals focus, so I would recommend using Firefox.
-
-; All the script coordinates are based on these four dimensions. DO NOT CHANGE!
-chWidth = 1136
-chHeight = 640
-chLeftMargin = 8
-chTopMargin = 30
-
-; These will be calculated by the script
-leftMarginOffset = 0
-topMarginOffset = 0
+scriptName=CH Sw1ft Bot
+scriptVersion=2.0
+minLibVersion=1.0
 
 ; -----------------------------------------------------------------------------------------
-; -- Configuration
+; -- Mandatory Configuration
 ; -----------------------------------------------------------------------------------------
 
-; In Clicker Heroes, turn off the "Show relic found popups" option. (*)
+; In Clicker Heroes, turn off the "Show relic found popups" option.
 
-; This is the base setting for how fast or slow the script will run.
-; 200 is a safe setting. Anything lower than 150 is on your own risk!
-zzz = 200 ; sleep delay (in ms) after a click
+; What game client are you running?
+; * Steam: Do the configuration at default resolution (1136x640).
+;   Right-click the script taskbar icon, start Windows Spy and verify the client size.
+; * Browser: Change "SetTitleMatchMode" and "browserTopMargin" in the ch_bot_lib.ahk file.
 
-lvlUpDelay = 5 ; time (in seconds) between lvl up clicks
-barUpdateDelay = 30 ; time (in seconds) between progress bar updates
+; Refresh script with Alt+F5.
 
-; true or false
-global showSplashTexts = true
-global showProgressBar = true
-global playSounds = true
+; Quick test #1: Ctrl+Alt+F1 should scroll down to the bottom
+; Quick test #2: Ctrl+Alt+F2 should switch to the relics tab and then back
 
 ; -- Speed run ----------------------------------------------------------------------------
 
-; http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
-
-speedRunTime = 30 ; minutes
-irisLevel = 1064 ; try to keep your Iris within 1000 levels of your optimal zone lvl (*)
+; Set to your Iris level in game.
+irisLevel := 1109 ; try to keep your Iris within 1000-1100 levels of your optimal zone
 
 ; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
-gildedRanger = 6 ; your main guilded ranger. Tip: Keep 1 gild on the hero starting the run. (*)
+gildedRanger := 6 ; the number of your main guilded ranger
 
-; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
-thresholdFactor = 1 ; 0, 1 or 2
+; -----------------------------------------------------------------------------------------
 
-activateSkillsAtStart = 1
-
-hybridMode = 0 ; chain a deep run when the speed run finish
-
-; Added flag for v0.19.
-autoAscend = 0 ; Warning! Set to 1 will both salvage relics and ascend without any user intervention!
-
-coinPickUpDelay = 7 ; seconds
-nextHeroDelay = 5 ; extra gold farm delay (in seconds) between heroes
-
-; -- Deep run -----------------------------------------------------------------------------
-
-deepRunTime = 60 ; minutes
-coolDownTime = 15 ; assuming Vaagur lvl 15
-clickableDelay = 30 ; hunt for a clickable every 30s (set to 0 to stop hunting)
-
-cpsTarget = 25 ; monster clicks per second
-
-; If you want a stable long deep run, I strongly recommend using the external monster clicker script.
-useExternalClicker = 1
-
-; -- Coordinates --------------------------------------------------------------------------
-
-; Use Windows Spy (for Steam version) or click Alt+MiddleMouseButton to tune the below (relative) coordinates.
-
-; Top LVL UP button when scrolled to the bottom
-xLvl = 100
-yLvl = 285
-oLvl = 107 ; offset to next button
-
-; Approximate Iris lvl thresholds that affect the scroll bar:
-; 260 (Atlas), 510 (Terra), 760 (Phthalo), 1010 (Banana), 1260 (Lilin)
-
-; initRun function settings (*)
-initDownClicks := [6,7,6,7,6,3] ; # of clicks down needed to get next 4 heroes in view (after an ascension + clickable)
+; A list of clicks needed to scroll down 4 heroes at a time, starting from the top.
+initDownClicks := [6,7,6,7,6,3]
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
-; Trial run with Alt+F2. Tip: If things move to fast, temporarily increase the zzz parameter to slow down the script.
-yLvlInit = 240
+yLvlInit := 240 
 
-; After an ascend plus (non-idle) clickable, who's at the bottom? Suggested settings:
-; Cadmia       ???
+; To get these two right, do this:
+; 1. Ascend with a "clickable" available.
+; 2. Click Alt+F1 (the script should pick up the clickable).
+; 3. Scroll down to the bottom. What ranger is last?
+; 4. From the list below, pick the matching settings:
+
+; Astraea      [6,5,6,5,6,3], 241
+; Alabaster    [6,6,5,6,6,3], 259
+; Cadmia       [6,6,6,6,6,3], 240
 ; Lilin        [6,6,6,6,6,3], 285
 ; Banana       [6,7,6,7,6,3], 240
 ; Phthalo      [6,7,7,6,7,3], 273
@@ -157,129 +88,109 @@ yLvlInit = 240
 ; Atlas        [7,7,7,8,7,3], 273
 ; Dread Knight [7,8,7,8,7,4], 257
 
-; Ascension button settings (*)
-ascDownClicks = 25 ; # of down clicks needed to get the button as centered as possible (after a full speed run)
-xAsc = 310
-yAsc = 409
+; E.g. if Phthalo is last, you set initDownClicks to [6,7,7,6,7,3] and yLvlInit to 273.
 
-buttonSize = 35
+; 5. Now click Alt+F2 (the script should level up and upgrade all heroes from Cid to Frostleaf).
 
-; Ascend Yes button
-xYes = 500
-yYes = 445
+; If some heroes where missed, do this:
+; * Set the below zzz setting to 500 and reload the script with Alt+F5.
+; * Scroll to the top and position your cursor dead center on Cid's lvl up button.
+; * Click Alt+F2 again. When you get to the heroes that where missed, try to see if you need 
+;   to slightly move up or down. Redo this till you find a position that looks to be inside 
+;   all top lvl up buttons (but the last), then click Alt+MiddleMouseButton.
+;   Update yLvlInit with this new y coordinate and try Alt+F2 once again.
+;   If it works now, then set back zzz to 200 and reload the script (Alt+F5).
 
-xCombatTab = 50
-yCombatTab = 130
+; 6. Click Alt+F3 to start a speed run. If the script got to a ranger to early and could 
+;    not buy all upgrades at once, then increase the thresholdFactor below.
+; 7. When done, click Alt+F4 to run the ascend code.
+;    If it didn't ascend, adjust the ascDownClicks setting below and try again.
 
-xRelicTab = 380
-yRelicTab = 130
+ascDownClicks := 26 ; # of down clicks needed to get the ascension button center:ish (after a full speed run)
 
-xSalvageJunk = 280
-ySalvageJunk = 470
+; If all worked so far, you are set to go!
 
-xDestroyYes = 500
-yDestroyYes = 430
+; -----------------------------------------------------------------------------------------
+; -- Optional Settings
+; -----------------------------------------------------------------------------------------
 
-; Scrollbar
-xScroll = 555
-yUp = 220
-yDown = 650
-top2BottomClicks = 50
+; (Steam only) Want to run borderless fullscreen?
+; 1. In Clicker Heroes, turn on the "Full Screen" option.
+; 2. Change "fullScreenOption" to "true" in the ch_bot_lib.ahk file.
+; 3. Refresh with Alt+F5.
 
-xProgressBar = 20 ; -420 for monitor 2
-yProgressBar = 20
+zzz := 200 ; sleep delay (in ms) after a click
+lvlUpDelay := 5 ; time (in seconds) between lvl up clicks
 
-; Buy Available Upgrades button
-xBuy = 300
-yBuy = 580
+; -- Speed run ----------------------------------------------------------------------------
 
-xHero = 474
-yHero = 229
+speedRunTime := 30 ; minutes (usually between 25 and 35 minutes)
 
-xMonster = 1120
-yMonster = 420
+; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
+; Each step adds or subtracts around 35 levels.
+thresholdFactor := 0 ; -2, -1, 0, 1 or 2
 
-; Tab safety zone (script will pause when entering)
-xSafetyZoneL = 7
-xSafetyZoneR = 425
-ySafetyZoneT = 104
-ySafetyZoneB = 154
+activateSkillsAtStart := true
 
-; No smart image recognition, so we click'em all!
-get_clickable()
-{
-	global
-	; Break idle on purpose to get the same amount of gold every run
-	clickPos(xMonster, yMonster)
-	clickPos(xMonster, yMonster)
-    clickPos(524, 487)
-    clickPos(747, 431)
-    clickPos(755, 480)
-    clickPos(760, 380)
-    clickPos(873, 512)
-    clickPos(1005, 453)
-    clickPos(1053, 443)
+hybridMode := false ; chain a deep run when the speed run finish
+
+; Added flag for v0.19.
+autoAscend := false ; Warning! Set to true will both salvage relics and ascend without any user intervention!
+autoAscendDelay := 15 ; warning timer (in seconds) before ascending
+
+; If you run the Steam client with autoAscend, you can screenshot every relic you salvage!
+screenShotRelics := false
+
+; -- Deep run -----------------------------------------------------------------------------
+
+deepRunTime := 60*2 ; minutes
+
+coolDownTime := 15 ; assuming maxed Vaagur (lvl 15)
+
+clickableHuntDelay := 15 ; hunt for a clickable every 15s
+stopHuntThreshold := 30 ; stop hunt when this many minutes remain of a deep run
+
+cpsTarget := 25 ; monster clicks per second
+
+; If you want a stable long deep run, I strongly recommend using the external monster clicker script.
+useExternalClicker := true
+
+; -- Look & Feel --------------------------------------------------------------------------
+
+; true or false
+global showSplashTexts := true
+global showProgressBar := true
+global playSounds := true
+
+; Splash text window position
+xSplash := A_ScreenWidth // 2 - wSplash // 2
+ySplash := A_ScreenHeight // 2
+
+; Progress bar position
+xProgressBar := 20
+yProgressBar := 20
+
+; If you run with a dual/tripple monitor setup, you can move windows
+; right or left by adding or subtracting A_ScreenWidth from the x-parameters.
+
+; -----------------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------------------
+
+if (libVersion < minLibVersion) {
+	showSplash("The bot lib version must be " . minLibVersion . " or higher!",5,2)
+	ExitApp
 }
+
+clientCheck()
 
 ; -----------------------------------------------------------------------------------------
 ; -- Hotkeys (+=Shift, !=Alt, ^=Ctrl)
 ; -----------------------------------------------------------------------------------------
 
-; (*) Quick initial tests:
-; Shift+F1 should scroll down to the bottom and lvl up the top hero
-; Shift+F2 should lvl up the wandering fisherman
-; Shift+F3 should switch to the relics tab and then back
-
-+F1::
-	scrollToBottom()
-	clickPos(xLvl, yLvl)
-return
-
-+F2::
-	scrollToTop()
-	scrollDown(initDownClicks[1])
-	clickPos(xLvl, yLvl)
-return
-
-+F3::
-	switchToRelicTab()
-	switchToCombatTab()
-return
-
 ; Show the cursor position with Alt+Middle Mouse Button
 !mbutton::
 	mousegetpos, xpos, ypos
-	msgbox,% "Cursor position: x" xpos-leftMarginOffset " y" ypos-topMarginOffset
-return
-
-; Reload script with Alt+F5
-!F5::
-	showSplash("Reloading...", 1)
-	Reload
-return
-
-; Calculate browser offsets compared to the Steam client with Alt+F6
-!F6::
-	winName=Lvl.*Clicker Heroes.*
-
-	IfWinExist, % winName
-	{
-		showSplash("Calculating browser offsets...", 1)
-
-		WinActivate
-		WinGetPos, x, y, winWidth, winHeight
-
-		leftMargin := (winWidth - chWidth) // 2
-		leftMarginOffset := leftMargin - chLeftMargin
-		topMarginOffset := browserTopMargin - chTopMargin
-
-		xSafetyZoneL += leftMarginOffset
-		xSafetyZoneR += leftMarginOffset
-		ySafetyZoneT += topMarginOffset
-		ySafetyZoneB += topMarginOffset
-	} else {
-		showSplash("Clicker Heroes started in browser?",3,2)
-	}
+	msgbox,,% scriptName " v" scriptVersion,% "Cursor position: x" xpos-leftMarginOffset " y" ypos-topMarginOffset
 return
 
 ; Pause/Unpause script
@@ -289,16 +200,27 @@ return
 ; Abort speed/deep runs and auto ascensions with Alt+Pause
 !Pause::
 	showSplash("Aborting...")
-	exitThread = 1
-	exitDRThread = 1
+	exitThread := true
+	exitDRThread := true
+return
+
+; Quick tests:
+; Ctrl+Alt+F1 should scroll down to the bottom
+; Ctrl+Alt+F2 should switch to the relics tab and then back
+
+^!F1::
+	scrollToBottom()
+return
+
+^!F2::
+	switchToRelicTab()
+	switchToCombatTab()
 return
 
 ; Alt+F1 to F4 are here to test the individual parts of the full speed run loop
 
 !F1::
-	get_clickable()
-    sleep % coinPickUpDelay * 1000
-	toggleMode()
+	getClickable()
 return
 
 !F2::
@@ -313,18 +235,23 @@ return
 	ascend(autoAscend)
 return
 
+; Reload script with Alt+F5
+!F5::
+	showSplash("Reloading bot...", 1)
+	Reload
+return
+
 ; Speed run loop.
 ; Use to farm Hero Souls
 ^F1::
-	keywait, ctrl
 	mode := hybridMode ? "hybrid" : "speed"
 	showSplash("Starting " . mode . " runs...")
 	loop
 	{
-		get_clickable()
+		getClickable()
 	    sleep % coinPickUpDelay * 1000
-		toggleMode() ; toggle to progression mode
 		initRun()
+		toggleMode() ; toggle to progression mode
 		if (activateSkillsAtStart) {
 			activateSkills()
 			activateEdrSkills()
@@ -340,8 +267,15 @@ return
 ; Deep run.
 ; Use (after a speed run) to get a few new gilds every now and then
 ^F2::
-	keywait, ctrl
 	deepRun()
+return
+
++!F1::
+	toggleFlag("autoAscend", autoAscend)
+return
+
++!F2::
+	toggleFlag("playSounds", playSounds)
 return
 
 ; -----------------------------------------------------------------------------------------
@@ -349,12 +283,10 @@ return
 ; -----------------------------------------------------------------------------------------
 
 ; Level up and upgrade all heroes
-
 initRun() {
 	global
 
 	switchToCombatTab()
-
 	clickPos(xHero, yHero) ; prevent initial upgrade ctrlClick fails
 
 	upgrade(initDownClicks[1],2,,2) ; cid --> brittany
@@ -363,12 +295,13 @@ initRun() {
 	upgrade(initDownClicks[4],,,,2) ; bobby --> king
 	upgrade(initDownClicks[5],2,,,2) ; ice --> amenhotep
 	upgrade(initDownClicks[6],,,2) ; beastlord --> shinatobe
-	upgrade(0,,,,,1) ; grant & frostleaf
+	upgrade(0,,,,,true) ; grant & frostleaf
 
+	scrollToBottom()
 	buyAvailableUpgrades()
 }
 
-upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=0) {
+upgrade(times, cc1:=1, cc2:=1, cc3:=1, cc4:=1, skip:=false) {
 	global
 
 	if (!skip) {
@@ -405,6 +338,7 @@ speedRun() {
 	local srDuration := speedRunTime * 60
 	local totalClickDelay := (srDuration // lvlUpDelay) * zzz // 1000
 	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay - nextHeroDelay * stints
+	local lastStintButton := gildedRanger = 9 ? 3 : 2 ; special case for Astraea
 
 	showSplash("Starting speed run...")
 
@@ -424,7 +358,7 @@ speedRun() {
 		lvlUp(midStintTime, 1, 2, ++stint, stints)
 		scrollWayDown(2)
 	}
-	lvlUp(lastStintTime, 1, 2, ++stint, stints)
+	lvlUp(lastStintTime, 1, lastStintButton, ++stint, stints)
 
 	showSplash("Speed run completed.")
 }
@@ -432,10 +366,11 @@ speedRun() {
 deepRun() {
 	global
 
-	exitDRThread = 0
-	monsterClicks = 0
+	exitDRThread := false
+	monsterClicks := 0
 	local drDuration := deepRunTime * 60
 	local cds := coolDownTime * 60
+	local y := yLvl + oLvl * 2 ; 3rd lvl up button
 
 	showSplash("Starting deep run...")
 
@@ -449,16 +384,17 @@ deepRun() {
 	setTimer, endDeepRun, % -drDuration * 1000 ; run only once
 
 	if (useExternalClicker) {
-		send {blind}{shift down}{f6}{shift up}
+		send {blind}{shift down}{f1}{shift up}
 	} else {
 		setTimer, slayMonsters, % 1000 / cpsTarget
 	}
 
-	local toggle = true
+	local stopHuntIndex := drDuration - stopHuntThreshold * 60
+	local toggle := true
 
 	while(!exitDRThread)
 	{
-		if (mod(A_Index, cds) = 0) {
+		if (mod(A_Index, cds) = 0 or A_Index = 1) {
 			if (toggle) {
 				activateSkills()
 				activateEdrSkills()
@@ -469,19 +405,17 @@ deepRun() {
 			toggle := !toggle
 		}
 		if (mod(A_Index, lvlUpDelay) = 0) {
-			ctrlClick(xLvl, yLvl + oLvl, 1, 0)
+			ctrlClick(xLvl, y, 1, 0)
 		}
-		if (clickableDelay > 0 and !hybridMode) {
-			if (mod(A_Index, clickableDelay) = 0) {
-				get_clickable()
-			}
+		if (mod(A_Index, clickableHuntDelay) = 0 and A_Index < stopHuntIndex) {
+			getClickable()
 		}
 		updateProgress(A_Index // barUpdateDelay, drDuration - A_Index)
 		sleep 1000
 	}
 
 	if (useExternalClicker) {
-		send {blind}{shift down}{f7}{shift up}
+		send {blind}{shift down}{pause}{shift up}
 	} else {
 		setTimer, slayMonsters, off
 	}
@@ -491,14 +425,14 @@ deepRun() {
 	stopProgress()
 	stopMouseMonitoring()
 
-	cpsText := !useExternalClicker ? " (" . clicksPerSecond . " cps)." : "."
+	local cpsText := !useExternalClicker ? " (" . clicksPerSecond . " cps)." : "."
 	showSplash("Deep run ended" . cpsText, 5)
 }
 
 lvlUp(seconds, buyUpgrades, button, stint, stints) {
 	global
 
-	exitThread = 0
+	exitThread := false
 	local y := yLvl + oLvl * (button - 1)
 	local title := "Speed Run Progress (" . stint . "/" . stints . ")"
 
@@ -529,20 +463,21 @@ lvlUp(seconds, buyUpgrades, button, stint, stints) {
 	stopMouseMonitoring()
 }
 
-ascend(autoYes:=0) {
+ascend(autoYes:=false) {
 	global
-	exitThread = 0
-	local y = yAsc - 3 * buttonSize
+	exitThread := false
+	local extraClicks := 6
+	local y := yAsc - extraClicks * buttonSize
 
 	if (autoYes) {
-		showSplash("10 seconds till ASCENSION! (Abort with Alt+Pause)", 10, 2)
+		showSplash(autoAscendDelay . " seconds till ASCENSION! (Abort with Alt+Pause)", autoAscendDelay, 2)
 		if (exitThread) {
 			showSplash("Ascension aborted!")
 			exit
 		}
 	} else {
 		playWarningSound()
-		msgbox, 4,,Salvage Junk Pile & Ascend?
+		msgbox, 4,% scriptName " v" scriptVersion,Salvage Junk Pile & Ascend?
 		ifmsgbox no
 			exit
 	}
@@ -555,7 +490,7 @@ ascend(autoYes:=0) {
 	sleep % zzz * 2
 
 	; Scrolling is not an exact science, hence we click above, center and below
-	loop 9
+	loop % 2 * extraClicks + 1
 	{
 		clickPos(xAsc, y)
 		y += buttonSize
@@ -569,10 +504,27 @@ salvageJunkPile() {
 	global
 
 	switchToRelicTab()
+	screenShot()
 	clickPos(xSalvageJunk, ySalvageJunk)
 	sleep % zzz * 4
 	clickPos(xDestroyYes, yDestroyYes)
 	sleep % zzz * 2
+}
+
+screenShot() {
+	global
+
+	if (autoAscend && screenShotRelics) {
+		IfWinExist, % winName
+		{
+			WinActivate
+			clickPos(xRelic, yRelic) ; focus
+			sleep % zzz
+			send {blind}{f12} ; Steam screenshot
+			sleep % zzz
+			clickPos(xRelic+100, yRelic) ; remove focus
+		}
+	}
 }
 
 switchToRelicTab() {
@@ -589,7 +541,6 @@ switchToCombatTab() {
 
 buyAvailableUpgrades() {
 	global
-	scrollToBottom()
 	clickPos(xBuy, yBuy)
 	sleep % zzz * 3
 }
@@ -648,11 +599,6 @@ ctrlClick(xCoord, yCoord, clickCount:=1, sleepSome:=1) {
 	}
 }
 
-clickPos(xCoord, yCoord, clickCount:=1) {
-	global
-	ControlClick,% "x" xCoord+leftMarginOffset " y" yCoord+topMarginOffset,% winName,,,% clickCount,Pos
-}
-
 ; Toggle between farm and progression modes
 toggleMode() {
 	global
@@ -682,76 +628,6 @@ activateErSkills() {
 	ControlSend,, {9 down}{9 up}, % winName ; reload
 }
 
-playWarningSound() {
-	if (playSounds) {
-		SoundPlay, %A_WinDir%\Media\tada.wav
-	}
-}
-
-playNotificationSound() {
-	if (playSounds) {
-		SoundPlay, %A_WinDir%\Media\Windows User Account Control.wav
-	}
-}
-
-showSplash(text, seconds:=2, sound:=1) {
-	global
-	if (showSplashTexts) {
-		splashtexton,200,40,% botName " v" botVersion,%text%
-	}
-	if (sound = 1) {
-		playNotificationSound()
-	} else if (sound = 2) {
-		playWarningSound()
-	}
-	sleep % seconds * 1000
-	splashtextoff
-}
-
-startProgress(title, min:=0, max:=100) {
-	global
-	if (showProgressBar) {
-		gui, new
-		gui, margin, 0, 0
-		gui, font, s18
-		gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
-		gui, add, text, w92 vProgressBarTime x+2
-		gui, show,% "na x" xProgressBar " y" yProgressBar,% botName " - " title
-	}
-}
-
-updateProgress(position, remainingTime) {
-	if (showProgressBar) {
-		guicontrol,, ProgressBar,% position
-		guicontrol,, ProgressBarTime,% formatSeconds(remainingTime)
-	}
-}
-
-stopProgress() {
-	if (showProgressBar) {
-		gui, destroy
-	}
-}
-
-formatSeconds(s) {
-    time = 19990101 ; *Midnight* of an arbitrary date.
-    time += %s%, seconds
-	FormatTime, timeStr, %time%, HH:mm:ss
-    return timeStr
-}
-
-secondsSince(startTime) {
-	return (A_TickCount - startTime) // 1000
-}
-
-fastMode() {
-	SetControlDelay, -1
-}
-
-slowMode() {
-	SetControlDelay, 20
-}
-
 startMouseMonitoring() {
 	setTimer, checkMousePosition, 250
 }
@@ -765,7 +641,7 @@ stopMouseMonitoring() {
 ; -----------------------------------------------------------------------------------------
 
 endDeepRun:
-	exitDRThread = 1
+	exitDRThread := true
 return
 
 slayMonsters:
@@ -778,9 +654,18 @@ checkMousePosition:
 	if (window = WinExist(winName)) {
 		WinActivate
 		MouseGetPos, x, y
-		if (x > xSafetyZoneL && x < xSafetyZoneR && y > ySafetyZoneT && y < ySafetyZoneB) {
+
+		leftMargin := fullScreenOption ? 0 : chMargin + leftMarginOffset
+		topMargin := fullScreenOption ? 0 : chTopMargin + topMarginOffset
+
+		xL := round(aspectRatio*(xSafetyZoneL - chMargin) + leftMargin + hBorder)
+		xR := round(aspectRatio*(xSafetyZoneR - chMargin) + leftMargin + hBorder)
+		yT := round(aspectRatio*(ySafetyZoneT - chTopMargin) + topMargin + vBorder)
+		yB := round(aspectRatio*(ySafetyZoneB - chTopMargin) + topMargin + vBorder)
+
+		if (x > xL && x < xR && y > yT && y < yB) {
 			playNotificationSound()
-			msgbox,,% botName " v" botVersion,Click safety pause engaged. Continue?
+			msgbox,,% scriptName " v" scriptVersion,Click safety pause engaged. Continue?
 		}
 	}
 return

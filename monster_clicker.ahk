@@ -1,11 +1,12 @@
 ; -----------------------------------------------------------------------------------------------------
 ; Clicker Heroes Monster Clicker
-; v1.01
 ; by Sw1ftb
 
-; Shift+F6 to start
-; Shift+F7 to stop
-; Shift+F8 to reload
+; Hotkeys:
+
+; Shift+F1 to start
+; Shift+Pause to stop
+; Shift+F5 to reload the script
 
 ; Built in click speed throttle when moving mouse cursor inside the Clicker Heroes window.
 
@@ -16,35 +17,66 @@
 #NoEnv
 #InstallKeybdHook
 
+#Include ch_bot_lib.ahk
+
+scriptName=Monster Clicker
+scriptVersion=1.1
+minLibVersion=1.0
+
 SetControlDelay, -1
 SetBatchLines, -1
-SetTitleMatchMode, 3 ; Steam (3) or browser (regex) version?
 
-winName=Clicker Heroes
-; winName=Lvl.*Clicker Heroes.*
+; -----------------------------------------------------------------------------------------
+; -- Configuration
+; -----------------------------------------------------------------------------------------
 
-xMonster = 1120
-yMonster = 420
+clickDuration := 0 ; minutes (set to zero for manual/remote operation)
+
+; -- Look & Feel --------------------------------------------------------------------------
+
+global showSplashTexts := true
+
+; Splash text window position
+xSplash := A_ScreenWidth // 2 - wSplash // 2 ; centered
+ySplash := A_ScreenHeight // 2 + 75
+
+; -----------------------------------------------------------------------------------------
+
+global playSounds := clickDuration > 0 ? true : false ; no sound when operated remotely
 
 short := 21 ; ms
-long := 2000
+long := 2000 ; throttled delay
+
 clickDelay := short
 
-+F6::
-	duration := 0 ; minutes (set to zero for manual/remote operation)
-	keepOnClicking = 1
-	monsterClicks = 0
+; -----------------------------------------------------------------------------------------
+
+if (libVersion < minLibVersion) {
+	showSplash("The bot lib version must be " . minLibVersion . " or higher!",5,2)
+	ExitApp
+}
+
+clientCheck()
+
+; -----------------------------------------------------------------------------------------
+; -- Hotkeys (+=Shift)
+; -----------------------------------------------------------------------------------------
+
+; Start clicker with Shift+F1
++F1::
+	keepOnClicking := true
+	monsterClicks := 0
 
 	showSplash("Starting...")
 
 	drStartTime := A_TickCount
-	if (duration > 0) {
-		setTimer, stopClicking, % -duration * 60 * 1000 ; run only once
+	if (clickDuration > 0) {
+		setTimer, stopClicking, % -clickDuration * 60 * 1000 ; run only once
 	}
 	setTimer, checkMouse, 1000
 
 	while(keepOnClicking) {
-		ControlClick,% "x" xMonster " y" yMonster,% winName,,,,Pos
+		clickPos(xMonster, yMonster)
 		monsterClicks++
 	    sleep % clickDelay
 	}
@@ -56,14 +88,20 @@ clickDelay := short
 	showSplash("Average CPS: " . clicksPerSecond, 5)
 return
 
-+F7::
-	keepOnClicking = 0
+; Stop clicker with Shift+Pause
++Pause::
+	keepOnClicking := false
 return
 
-+F8::
+; Reload script with Shift+F5
++F5::
 	showSplash("Reloading clicker...", 1)
 	Reload
 return
+
+; -----------------------------------------------------------------------------------------
+; -- Subroutines
+; -----------------------------------------------------------------------------------------
 
 checkMouse:
 	MouseGetPos,,, window
@@ -75,13 +113,5 @@ checkMouse:
 return
 
 stopClicking:
-	keepOnClicking = 0
+	keepOnClicking := false
 return
-
-showSplash(text, seconds:=2)
-{
-	yPos := A_ScreenHeight // 2 + 50
-	progress,% "w200 y" yPos " zh0 fs10", %text%,, Monster Clicker v1.0
-	sleep % seconds * 1000
-	progress, off
-}
