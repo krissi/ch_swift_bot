@@ -15,7 +15,7 @@ browserTopMargin := 230 ; Firefox [230], IE [198], Chrome (steals focus!) [222]
 ; -- BEWARE!        CHANGING ANYTHING BELOW THIS LINE IS ON YOUR OWN RISK        BEWARE! --
 ; -----------------------------------------------------------------------------------------
 
-libVersion=1.0
+libVersion=1.1
 
 winName=Clicker Heroes
 
@@ -23,6 +23,8 @@ global ProgressBar, ProgressBarTime ; progress bar controls
 
 exitThread := false
 exitDRThread := false
+
+chWinId := ""
 
 ; All the script coordinates are based on these four default dimensions.
 chWidth := 1136
@@ -44,8 +46,10 @@ vBorder := 0
 
 wSplash := 200
 
+zzz := 200 ; sleep delay (in ms) after a click
+lvlUpDelay := 5 ; time (in seconds) between lvl up clicks
 barUpdateDelay := 30 ; time (in seconds) between progress bar updates
-coinPickUpDelay := 7 ; seconds
+coinPickUpDelay := 7 ; time (in seconds) needed to pick up all coins from a clickable
 nextHeroDelay := 5 ; extra gold farm delay (in seconds) between heroes
 
 ; -- Coordinates --------------------------------------------------------------------------
@@ -84,17 +88,37 @@ yDestroyYes := 430
 xScroll := 554
 yUp := 219
 yDown := 653
-top2BottomClicks := 50
+top2BottomClicks := 46
+
+xGilded := 95
+yGilded := 582
+
+xGildedClose := 1090
+yGildedClose := 54
+
+rangers := ["Dread Knight", "Atlas", "Terra", "Phthalo", "Banana", "Lilin", "Cadmia", "Alabaster", "Astraea"]
+
+rangerPositions := {}
+rangerPositions[1] := {x:180, y:435}
+rangerPositions[2] := {x:380, y:435}
+rangerPositions[3] := {x:580, y:435}
+rangerPositions[4] := {x:780, y:435}
+rangerPositions[5] := {x:980, y:435}
+rangerPositions[6] := {x:180, y:495}
+rangerPositions[7] := {x:380, y:495}
+rangerPositions[8] := {x:580, y:495}
+rangerPositions[9] := {x:780, y:495}
+
 
 ; Buy Available Upgrades button
 xBuy := 300
-yBuy := 580
+yBuy := 582
 
 xHero := 474
-yHero := 229
+yHero := 227
 
-xMonster := 1120
-yMonster := 420
+xMonster := 920
+yMonster := 164
 
 ; Tab safety zone (script will pause when entering)
 xSafetyZoneL := 7
@@ -110,8 +134,9 @@ ySafetyZoneB := 154
 getClickable() {
 	global
 	; Break idle on purpose to get the same amount of gold every run
-	clickPos(xMonster, yMonster)
-	clickPos(xMonster, yMonster)
+	loop 3 {
+		clickPos(xMonster, yMonster)
+	}
     clickPos(524, 487)
     clickPos(747, 431)
     clickPos(760, 380)
@@ -121,12 +146,14 @@ getClickable() {
 }
 
 clientCheck() {
+	WinGet, activeWinId, ID, A ; remember current active window...
 	if (A_TitleMatchMode = 3) {
 		calculateSteamAspectRatio() ; Steam
 	} else {
 		calculateBrowserOffsets() ; Browser
 		fullScreenOption := false
 	}
+	WinActivate, ahk_id %activeWinId% ; ... and restore focus back
 }
 
 calculateBrowserOffsets() {
@@ -137,6 +164,7 @@ calculateBrowserOffsets() {
 		showSplash("Calculating browser offsets...", 2, 0)
 		WinActivate
 		WinGetPos, x, y, w, h
+		WinGet, chWinId, ID, A
 
 		local leftMargin := (w - chWidth) // 2
 		leftMarginOffset := leftMargin - chMargin
@@ -152,6 +180,7 @@ calculateSteamAspectRatio() {
 	{
 		WinActivate
 		WinGetPos, x, y, w, h
+		WinGet, chWinId, ID, A
 
 		; Fullscreen sanity checks
 		if (fullScreenOption) {
@@ -188,11 +217,21 @@ calculateSteamAspectRatio() {
 
 clickPos(xCoord, yCoord, clickCount:=1) {
 	global
+	local xAdj := getAdjustedX(xCoord)
+	local yAdj := getAdjustedY(yCoord)
+ 	ControlClick, x%xAdj% y%yAdj%, ahk_id %chWinId%,,, %clickCount%, NA
+}
+
+getAdjustedX(x) {
+	global
 	local leftMargin := fullScreenOption ? 0 : chMargin + leftMarginOffset
+	return round(aspectRatio*(x - chMargin) + leftMargin + hBorder)
+}
+
+getAdjustedY(y) {
+	global
 	local topMargin := fullScreenOption ? 0 : chTopMargin + topMarginOffset
-	local xAdj := round(aspectRatio*(xCoord - chMargin) + leftMargin + hBorder)
-	local yAdj := round(aspectRatio*(yCoord - chTopMargin) + topMargin + vBorder)
-	ControlClick,% "x" xAdj " y" yAdj,% winName,,,% clickCount,Pos
+	return round(aspectRatio*(y - chTopMargin) + topMargin + vBorder)
 }
 
 playWarningSound() {
@@ -257,14 +296,6 @@ formatSeconds(s) {
 
 secondsSince(startTime) {
 	return (A_TickCount - startTime) // 1000
-}
-
-fastMode() {
-	SetControlDelay, -1
-}
-
-slowMode() {
-	SetControlDelay, 20
 }
 
 toggleFlag(flagName, byref flag) {

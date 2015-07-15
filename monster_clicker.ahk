@@ -9,22 +9,21 @@
 ; Shift+F5 to reload the script
 
 ; Built in click speed throttle when moving mouse cursor inside the Clicker Heroes window.
-
-; Note that the Shop window will block all clicking, so be careful not to loose your Juggernaut combo!
 ; -----------------------------------------------------------------------------------------------------
 
 #Persistent
 #NoEnv
 #InstallKeybdHook
 
+#Include %A_ScriptDir%
 #Include ch_bot_lib.ahk
-
-scriptName=Monster Clicker
-scriptVersion=1.1
-minLibVersion=1.0
 
 SetControlDelay, -1
 SetBatchLines, -1
+
+scriptName=Monster Clicker
+scriptVersion=1.2
+minLibVersion=1.1
 
 ; -----------------------------------------------------------------------------------------
 ; -- Configuration
@@ -86,6 +85,14 @@ clientCheck()
 	elapsedTime := (A_TickCount - drStartTime) / 1000
 	clicksPerSecond := round(monsterClicks / elapsedTime, 2)
 	showSplash("Average CPS: " . clicksPerSecond, 5)
+return
+
+; Remote pause
++F2::
+	critical
+	if (keepOnClicking) {
+		msgbox,,% scriptName " v" scriptVersion,Click safety pause engaged. Continue?
+	}
 return
 
 ; Stop clicker with Shift+Pause
