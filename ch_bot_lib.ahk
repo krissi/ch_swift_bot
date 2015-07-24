@@ -15,7 +15,7 @@ browserTopMargin := 230 ; Firefox [230], IE [198], Chrome (steals focus!) [222]
 ; -- BEWARE!        CHANGING ANYTHING BELOW THIS LINE IS ON YOUR OWN RISK        BEWARE! --
 ; -----------------------------------------------------------------------------------------
 
-libVersion=1.1
+libVersion=1.2
 
 winName=Clicker Heroes
 
@@ -52,6 +52,8 @@ barUpdateDelay := 30 ; time (in seconds) between progress bar updates
 coinPickUpDelay := 7 ; time (in seconds) needed to pick up all coins from a clickable
 nextHeroDelay := 5 ; extra gold farm delay (in seconds) between heroes
 
+debug := false
+
 ; -- Coordinates --------------------------------------------------------------------------
 
 ; Top LVL UP button when scrolled to the bottom
@@ -71,6 +73,9 @@ yYes := 445
 
 xCombatTab := 50
 yCombatTab := 130
+
+xAncientTab := 297
+yAncientTab := 130
 
 xRelicTab := 380
 yRelicTab := 130
@@ -146,6 +151,7 @@ getClickable() {
 }
 
 clientCheck() {
+	global
 	WinGet, activeWinId, ID, A ; remember current active window...
 	if (A_TitleMatchMode = 3) {
 		calculateSteamAspectRatio() ; Steam
@@ -170,7 +176,8 @@ calculateBrowserOffsets() {
 		leftMarginOffset := leftMargin - chMargin
 		topMarginOffset := browserTopMargin - chTopMargin
 	} else {
-		showSplash("Clicker Heroes started in browser?",3,2)
+		showWarningSplash("Clicker Heroes started in browser?")
+		ExitApp
 	}
 }
 
@@ -185,11 +192,11 @@ calculateSteamAspectRatio() {
 		; Fullscreen sanity checks
 		if (fullScreenOption) {
 			if (w <> A_ScreenWidth || h <> A_ScreenHeight) {
-				showSplash("Bot expect fullscreen mode!",3,2)
+				showWarningSplash("Set the fullScreenOption to false in the bot lib file.")
 				return
 			}
 		} else if (w = A_ScreenWidth && h = A_ScreenHeight) {
-			showSplash("Bot don't expect fullscreen mode!",3,2)
+			showWarningSplash("Set the fullScreenOption to true in the bot lib file.")
 			return
 		}
 
@@ -211,7 +218,68 @@ calculateSteamAspectRatio() {
 			}
 		}
 	} else {
-		showSplash("Clicker Heroes started?",3,2)
+		showWarningSplash("Clicker Heroes started?")
+		ExitApp
+	}
+}
+
+switchToCombatTab() {
+	global
+	clickPos(xCombatTab, yCombatTab)
+	sleep % zzz * 4
+}
+
+switchToAncientTab() {
+	global
+	clickPos(xAncientTab, yAncientTab)
+	sleep % zzz * 2
+}
+
+switchToRelicTab() {
+	global
+	clickPos(xRelicTab, yRelicTab)
+	sleep % zzz * 2
+}
+
+scrollToTop() {
+	global
+	scrollUp(top2BottomClicks)
+	sleep % 1000
+}
+
+scrollToBottom() {
+	global
+	scrollDown(top2BottomClicks)
+	sleep % 1000
+}
+
+scrollUp(clickCount:=1) {
+	global
+	clickPos(xScroll, yUp, clickCount)
+	sleep % zzz * 2
+}
+
+scrollDown(clickCount:=1) {
+	global
+	clickPos(xScroll, yDown, clickCount)
+	sleep % zzz * 2
+}
+
+maxClick(xCoord, yCoord, clickCount:=1) {
+	global
+	ControlSend,, {shift down}{q down}, % winName
+	clickPos(xCoord, yCoord, clickCount)
+	ControlSend,, {q up}{shift up}, % winName
+	sleep % zzz
+}
+
+ctrlClick(xCoord, yCoord, clickCount:=1, sleepSome:=1) {
+	global
+	ControlSend,, {ctrl down}, % winName
+	clickPos(xCoord, yCoord, clickCount)
+	ControlSend,, {ctrl up}, % winName
+	if (sleepSome) {
+		sleep % zzz
 	}
 }
 
@@ -234,23 +302,31 @@ getAdjustedY(y) {
 	return round(aspectRatio*(y - chTopMargin) + topMargin + vBorder)
 }
 
-playWarningSound() {
-	if (playSounds) {
-		SoundPlay, %A_WinDir%\Media\tada.wav
-	}
-}
-
 playNotificationSound() {
-	if (playSounds) {
+	if (playNotificationSounds) {
 		SoundPlay, %A_WinDir%\Media\Windows User Account Control.wav
 	}
 }
 
-showSplash(text, seconds:=2, sound:=1) {
+playWarningSound() {
+	if (playWarningSounds) {
+		SoundPlay, %A_WinDir%\Media\tada.wav
+	}
+}
+
+showSplashAlways(text, seconds:=2) {
+	showSplash(text, seconds, 1, 1)
+}
+
+showWarningSplash(text, seconds:=5) {
+	showSplash(text, seconds, 2, 1)
+}
+
+showSplash(text, seconds:=2, sound:=1, showAlways:=0) {
 	global
 	if (seconds > 0) {
-		if (showSplashTexts) {
-			progress,% "w" wSplash " x" xSplash " y" ySplash " zh0 fs10", %text%,,% scriptName " v" scriptVersion
+		if (showSplashTexts or showAlways) {
+			progress,% "w" wSplash " x" xSplash " y" ySplash " zh0 fs10", %text%,,% script
 		}
 		if (sound = 1) {
 			playNotificationSound()
@@ -270,7 +346,7 @@ startProgress(title, min:=0, max:=100) {
 		gui, font, s18
 		gui, add, progress,% "w300 h28 range" min "-" max " -smooth vProgressBar"
 		gui, add, text, w92 vProgressBarTime x+2
-		gui, show,% "na x" xProgressBar " y" yProgressBar,% scriptName " - " title
+		gui, show,% "na x" xProgressBar " y" yProgressBar,% script " - " title
 	}
 }
 
@@ -301,5 +377,16 @@ secondsSince(startTime) {
 toggleFlag(flagName, byref flag) {
 	flag := !flag
 	flagValue := flag ? "On" : "Off"
-	showSplash("Toggled " . flagName . " " . flagValue)
+	showSplashAlways("Toggled " . flagName . " " . flagValue)
+}
+
+screenShot() {
+	global
+	if (A_TitleMatchMode = 3) { ; Steam only
+		WinGet, activeWinId, ID, A ; remember current active window...
+		WinActivate, % winName
+		send {f12 down}{f12 up} ; screenshot
+		sleep % zzz
+		WinActivate, ahk_id %activeWinId% ; ... and restore focus back
+	}
 }

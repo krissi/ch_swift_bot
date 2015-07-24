@@ -10,6 +10,9 @@
 ; ch_sw1ft_bot.ahk    https://gist.github.com/swiftb/940bd6da6ad2bc9199b0#file-ch_sw1ft_bot-ahk
 ; monster_clicker.ahk https://gist.github.com/swiftb/940bd6da6ad2bc9199b0#file-monster_clicker-ahk
 
+; New in v2.2 is the option to do all configuration in a separate settings file!
+; Example @ http://pastebin.com/7haemd0h
+
 ; -- Quick start guide --------------------------------------------------------------------
 
 ; 1. Install the latest version of AutoHotkey from http://ahkscript.org/
@@ -48,7 +51,10 @@
 ; -- Toggle boolean (true/false) settings
 ; Shift+Ctrl+F1 to toggle the autoAscend flag
 ; Shift+Ctrl+F2 to toggle the screenShotRelics flag
-; Shift+Ctrl+F3 to toggle the playSounds flag
+; Shift+Ctrl+F3 to toggle the playNotificationSounds flag
+; Shift+Ctrl+F4 to toggle the playWarningSounds flag
+; Shift+Ctrl+F5 to toggle the showSplashTexts flag
+; Shift+Ctrl+F12 to toggle the debug flag (currently to debug the speed run variable calculations)
 
 ; -----------------------------------------------------------------------------------------
 
@@ -62,8 +68,10 @@
 SetControlDelay, -1
 
 scriptName=CH Sw1ft Bot
-scriptVersion=2.1
-minLibVersion=1.1
+scriptVersion=2.2
+minLibVersion=1.2
+
+script := scriptName . " v" . scriptVersion
 
 ; -----------------------------------------------------------------------------------------
 ; -- Mandatory Configuration
@@ -84,20 +92,31 @@ minLibVersion=1.1
 ; -- Speed run ----------------------------------------------------------------------------
 
 ; Set to your Iris level in game.
-irisLevel := 1299 ; try to keep your Iris within 1000-1100 levels of your optimal zone
+irisLevel := 1029 ; try to keep your Iris within 1001 levels of your optimal zone
 
-; 1:dread knight, 2:atlas, 3:terra, 4:phthalo, 5:banana, 6:lilin, 7:cadmia, 8:alabaster, 9:astraea
-gildedRanger := 7 ; the number of your main guilded ranger
+; Clicker Heroes Ancients Optimizer @ http://s3-us-west-2.amazonaws.com/clickerheroes/ancientssoul.html
+
+; Use the optimizer to set the optimal level and time:
+optimalLevel := 2000
+speedRunTime := 29 ; minutes (usually between 27 and 33 minutes)
+
+; In the Heroes tab you can verify that you are using the optimal ranger.
+gildedRanger := 6 ; the number of your main guilded ranger
+; 1:Dread Knight, 2:Atlas, 3:Terra, 4:Phthalo, 5:Banana, 6:Lilin, 7:Cadmia, 8:Alabaster, 9:Astraea
+
+; The assistant will automatically try to set the correct initDownClicks and yLvlInit settings.
+; It will also assist with Iris level recommendations.
+useConfigurationAssistant := true
 
 ; -- Init run & ascend --------------------------------------------------------------------
 
 ; These settings are affected by your Iris level.
 
 ; A list of clicks needed to scroll down 4 heroes at a time, starting from the top.
-initDownClicks := [6,6,6,6,6,3]
+initDownClicks := [6,7,6,7,6,3] ; the assistant will override this value if active
 
 ; This y coordinate is supposed to keep itself inside the top lvl up button when scrolling down according to the above "clicking pattern".
-yLvlInit := 285
+yLvlInit := 240 ; the assistant will override this value if active
 
 ; To get these two right, do this:
 ; 1. Ascend with a "clickable" available.
@@ -121,7 +140,7 @@ yLvlInit := 285
 ; 5. Now click Alt+F2 (the script should level up and upgrade all heroes from Cid to Frostleaf).
 
 ; If some heroes where missed, make sure you have picked the suggested setting for your Iris level.
-; If you are close to one of these Iris thresholds, you should move above it with some margin. 
+; If you are close to one of these Iris irisThresholds, you should move above it with some margin. 
 ; E.g if your Iris is at 489, you should level it to at least 529, pick the setting for Terra,
 ; reload the script (Alt+F5), ascend with a clickable and try Alt+F2 again.
 
@@ -139,7 +158,7 @@ yLvlInit := 285
 ; 7. When done, click Alt+F4 to run the ascend code.
 ;    If it didn't ascend, adjust the ascDownClicks setting below and try again.
 
-ascDownClicks := 25 ; # of down clicks needed to get the ascension button center:ish (after a full speed run)
+ascDownClicks := 26 ; # of down clicks needed to get the ascension button center:ish (after a full speed run)
 
 ; If all worked so far, you are set to go!
 
@@ -154,11 +173,8 @@ ascDownClicks := 25 ; # of down clicks needed to get the ascension button center
 
 ; -- Speed run ----------------------------------------------------------------------------
 
-speedRunTime := 30 ; minutes (usually between 25 and 35 minutes)
-
-; Adjust this setting so the script reach and can level your gilded ranger to >150 instantly.
-; Each step adds or subtracts around 35 levels.
-thresholdFactor := 0 ; -2, -1, 0, 1 or 2
+; Adjust this setting so the script reach and can level your gilded ranger to >175 instantly.
+thresholdFactor := 0 ; -1, -0.5, 0, 0.5, 1
 
 activateSkillsAtStart := true
 
@@ -176,7 +192,7 @@ screenShotRelics := true
 deepRunTime := 60 ; minutes
 
 clickableHuntDelay := 15 ; hunt for a clickable every 15s
-stopHuntThreshold := 30 ; stop hunt when this many minutes remain of a deep run
+stopHuntirisThreshold := 30 ; stop hunt when this many minutes remain of a deep run
 
 ; Number of gilds to move over at a time
 reGildCount := 100 ; don't set this higher than 100 if you plan on moving gilds during a deep run
@@ -185,9 +201,10 @@ reGildRanger := gildedRanger + 1
 ; -- Look & Feel --------------------------------------------------------------------------
 
 ; true or false
-global showSplashTexts := true
+global showSplashTexts := true ; Note that some splash texts will always be shown
 global showProgressBar := true
-global playSounds := true
+global playNotificationSounds := true
+global playWarningSounds := true
 
 ; Splash text window position
 xSplash := A_ScreenWidth // 2 - wSplash // 2
@@ -207,28 +224,41 @@ yProgressBar := 20
 ; 1 - Clickstorm, 2 - Powersurge, 3 - Lucky Strikes, 4 - Metal Detector, 5 - Golden Clicks
 ; 6 - The Dark Ritual, 7 - Super Clicks, 8 - Energize, 9 - Reload
 
+comboStart := [15*60, "8-1-2-3-4-5-7-6-9"]
 comboEDR := [15*60, "1-2-3-4-5-7-8-6-9", "8-9-1-2-3-4-5-7"]
-comboDPS := [2.5*60, "8-3-7-6-5-4-2", "2", "2", "2-3-4", "2", "2"]
+comboExtraLucky := [2.5*60, "8-3-7-6-5-4-2", "2", "2", "2-3-4", "2", "2"]
+comboGoldenLuck := [2.5*60, "6-2-3-5-8-9", "2-3-4-5-7", "2", "2", "2-3-4", "2", "2"]
+comboSuperLucky := [2.5*60, "6-2-3-7-8-9", "2-3-4-5-7", "2", "2", "2-3-4", "2", "2"]
+
+speedRunStartCombo := comboStart
+deepRunCombo := comboSuperLucky
 
 ; comboEDR timetable:
 ; 00:00 : 1-2-3-4-5-7-8-6-9
 ; 15:00 : 8-9-1-2-3-4-5-7
 ; 30:00 : repeat
 
-; comboDPS timetable:
-; 00:00 : 8-3-7-6-5-4-2
-; 02:30 : 2
+; comboSuperLucky timetable:
+; 00:00 : 6-2-3-7-8-9
+; 02:30 : 2-3-4-5-7
 ; 05:00 : 2
-; 07:30 : 2-3-4
-; 10:00 : 2
+; 07:30 : 2
+; 10:00 : 2-3-4
 ; 12:30 : 2
-; 15:00 : repeat
+; 15:00 : 2
+; 17:30 : repeat
 
 ; -----------------------------------------------------------------------------------------
 
-if (libVersion < minLibVersion) {
-	showSplash("The bot lib version must be " . minLibVersion . " or higher!",5,2)
+if (libVersion != minLibVersion) {
+	showWarningSplash("The bot lib version must be " . minLibVersion . "!")
 	ExitApp
+}
+
+#Include *i ch_bot_settings.ahk
+
+if (useConfigurationAssistant) {
+	configurationAssistant()
 }
 
 clientCheck()
@@ -240,7 +270,7 @@ clientCheck()
 ; Show the cursor position with Alt+Middle Mouse Button
 !mbutton::
 	mousegetpos, xpos, ypos
-	msgbox,,% scriptName " v" scriptVersion,% "Cursor position: x" xpos-leftMarginOffset " y" ypos-topMarginOffset
+	msgbox,,% script,% "Cursor position: x" xpos-leftMarginOffset " y" ypos-topMarginOffset
 return
 
 ; Pause/Unpause script
@@ -249,7 +279,7 @@ return
 
 ; Abort speed/deep runs and auto ascensions with Alt+Pause
 !Pause::
-	showSplash("Aborting...")
+	showSplashAlways("Aborting...")
 	exitThread := true
 	exitDRThread := true
 return
@@ -278,6 +308,7 @@ return
 return
 
 !F3::
+	switchToCombatTab()
 	speedRun()
 return
 
@@ -287,7 +318,7 @@ return
 
 ; Reload script with Alt+F5
 !F5::
-	showSplash("Reloading bot...", 1)
+	showSplashAlways("Reloading bot...", 1)
 	Reload
 return
 
@@ -295,15 +326,14 @@ return
 ; Use to farm Hero Souls
 ^F1::
 	mode := hybridMode ? "hybrid" : "speed"
-	showSplash("Starting " . mode . " runs...")
+	showSplashAlways("Starting " . mode . " runs...")
 	loop
 	{
 		getClickable()
 	    sleep % coinPickUpDelay * 1000
 		initRun()
-		toggleMode() ; toggle to progression mode
 		if (activateSkillsAtStart) {
-			activateSkills(comboEDR[2])
+			activateSkills(speedRunStartCombo[2])
 		}
 		speedRun()
 		if (hybridMode) {
@@ -321,18 +351,18 @@ return
 
 ^F6::
 	reGildRanger := reGildRanger > rangers.MinIndex() ? reGildRanger-1 : reGildRanger
-	showSplash("Re-gild ranger set to " . rangers[reGildRanger])
+	showSplashAlways("Re-gild ranger set to " . rangers[reGildRanger])
 return
 
 ^F7::
 	reGildRanger := reGildRanger < rangers.MaxIndex() ? reGildRanger+1 : reGildRanger
-	showSplash("Re-gild ranger set to " . rangers[reGildRanger])
+	showSplashAlways("Re-gild ranger set to " . rangers[reGildRanger])
 return
 
 ^F8::
 	critical
 	playNotificationSound()
-	msgbox, 4,% scriptName " v" scriptVersion,% "Move " . reGildCount . " gilds to " . rangers[reGildRanger] . "?"
+	msgbox, 4,% script,% "Move " . reGildCount . " gilds to " . rangers[reGildRanger] . "?"
 	ifmsgbox no
 		return
 	regild(reGildRanger, reGildCount) ; will pause the monster clicker if running
@@ -347,12 +377,80 @@ return
 return
 
 +^F3::
-	toggleFlag("playSounds", playSounds)
+	toggleFlag("playNotificationSounds", playNotificationSounds)
+return
+
++^F4::
+	toggleFlag("playWarningSounds", playWarningSounds)
+return
+
++^F5::
+	toggleFlag("showSplashTexts", showSplashTexts)
+return
+
++^F12::
+	toggleFlag("debug", debug)
 return
 
 ; -----------------------------------------------------------------------------------------
 ; -- Functions
 ; -----------------------------------------------------------------------------------------
+
+configurationAssistant() {
+	global
+
+	if (irisLevel < 145) {
+		playWarningSound()
+		msgbox,,% script,% "Your Iris do not fulfill the minimum level requirement of 145 or higher!"
+		exit
+	}
+
+	if (irisThreshold(2010)) { ; Astraea
+		initDownClicks := [6,5,6,5,6,3]
+		yLvlInit := 241
+	} else if (irisThreshold(1760)) { ; Alabaster
+		initDownClicks := [6,6,5,6,6,3]
+		yLvlInit := 259
+	} else if (irisThreshold(1510)) { ; Cadmia
+		initDownClicks := [6,6,6,6,6,3]
+		yLvlInit := 240
+	} else if (irisThreshold(1260)) { ; Lilin
+		initDownClicks := [6,6,6,6,6,3]
+		yLvlInit := 285
+	} else if (irisThreshold(1010)) { ; Banana
+		initDownClicks := [6,7,6,7,6,3]
+		yLvlInit := 240
+	} else if (irisThreshold(760)) { ; Phthalo
+		initDownClicks := [6,7,7,6,7,3]
+		yLvlInit := 273
+	} else if (irisThreshold(510)) { ; Terra
+		initDownClicks := [7,7,7,7,7,3]
+		yLvlInit := 240
+	} else if (irisThreshold(260)) { ; Atlas
+		initDownClicks := [7,7,7,8,7,3]
+		yLvlInit := 273
+	} else { ; Dread Knight
+		initDownClicks := [7,8,7,8,7,4]
+		yLvlInit := 257
+	}
+
+	if (irisLevel < optimalLevel - 1001) {
+		local levels := optimalLevel - 1001 - irisLevel
+		playNotificationSound()
+		msgbox,,% script,% "Your Iris is " . levels . " levels below the recommended ""optimal level - 1001"" rule."
+	}
+}
+
+irisThreshold(lvl) {
+	global
+	local upperThreshold := lvl + 19
+	local lowerThreshold := lvl - 20
+	if (irisLevel >= lowerThreshold and irisLevel < upperThreshold) {
+		playWarningSound()
+		msgbox,,% script,% "Threshold proximity warning! You should level up your Iris to " . upperThreshold . " or higher."
+	}
+	return irisLevel > lvl
+}
 
 ; Level up and upgrade all heroes
 initRun() {
@@ -395,7 +493,7 @@ speedRun() {
 	local stints := 2
 	local tMax := 7 * 60
 	local lMax := 250
-	local lvlThreshold := 35 * thresholdFactor
+	local lvlThreshold := 36 * thresholdFactor
 	local zoneLvl := gildedRanger * lMax + lvlThreshold ; approx zone lvl where we can buy our gilded ranger @ lvl 150
 	local lvls := zoneLvl - irisLevel ; lvl's to get there
 	local midStintTime := 0
@@ -408,21 +506,53 @@ speedRun() {
 	}
 	local firstStintTime := ceil(lvls * tMax / lMax)
 	local srDuration := speedRunTime * 60
-	local totalClickDelay := (srDuration // lvlUpDelay) * zzz // 1000
-	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay - nextHeroDelay * stints
+	local totalClickDelay := ceil(srDuration / lvlUpDelay * zzz / 1000 + nextHeroDelay * stints)
+	local lastStintTime := srDuration - firstStintTime - midStintTime - totalClickDelay
 	local lastStintButton := gildedRanger = 9 ? 3 : 2 ; special case for Astraea
+
+	if (debug)
+	{
+		local nl := "`r`n"
+		local output := ""
+		output .= "irisLevel = " . irisLevel . nl
+		output .= "optimalLevel = " . optimalLevel . nl
+		output .= "speedRunTime = " . speedRunTime . nl
+		output .= "gildedRanger = " . rangers[gildedRanger] . nl
+		output .= "-----------------------------" . nl
+		output .= "initDownClicks = "
+		for i, e in initDownClicks {
+			output .= e " "
+		}
+		output .= nl
+		output .= "yLvlInit = " . yLvlInit . nl
+		output .= "thresholdFactor = " . thresholdFactor . nl
+		output .= "-----------------------------" . nl
+		output .= "lvlThreshold = " . lvlThreshold . nl
+		output .= "zoneLvl = " . zoneLvl . nl
+		output .= "lvls = " . lvls . nl
+		output .= "srDuration = " . formatSeconds(srDuration) . nl
+		output .= "firstStintTime = " . formatSeconds(firstStintTime) . nl
+		output .= "midStintTime = " . formatSeconds(midStintTime) . nl
+		output .= "lastStintTime = " . formatSeconds(lastStintTime) . nl
+		output .= "totalClickDelay = " . formatSeconds(totalClickDelay) . nl
+
+		clipboard := % output
+		msgbox % output
+		return
+	}
 
 	showSplash("Starting speed run...")
 
-	switchToCombatTab()
-
-	if (irisLevel < lMax + lvlThreshold) ; Iris high enough to start with a ranger?
+	if (irisLevel < 2 * lMax + 10) ; Iris high enough to start with a ranger?
 	{
+		switchToCombatTab()
 		scrollDown(initDownClicks[1])
+		toggleMode() ; toggle to progression mode
 		lvlUp(firstStintTime, 0, 3, ++stint, stints) ; nope, let's bridge with Samurai
 		scrollToBottom()
 	} else {
 		scrollToBottom()
+		toggleMode() ; toggle to progression mode
 		lvlUp(firstStintTime, 1, 1, ++stint, stints)
 		scrollWayDown(3)
 	}
@@ -450,9 +580,9 @@ deepRun() {
 	startProgress("Deep Run Progress", 0, drDuration // barUpdateDelay)
 	monsterClickerOn()
 
-	local comboDelay := comboDPS[1]
+	local comboDelay := deepRunCombo[1]
 	local comboIndex := 2
-	local stopHuntIndex := drDuration - stopHuntThreshold * 60
+	local stopHuntIndex := drDuration - stopHuntirisThreshold * 60
 	local t := 0
 
 	loop % drDuration
@@ -461,13 +591,13 @@ deepRun() {
 			monsterClickerOff()
 			stopProgress()
 			stopMouseMonitoring()
-			showSplash("Deep run aborted!")
+			showSplashAlways("Deep run aborted!")
 			exit
 		}
 		clickPos(xMonster, yMonster)
 		if (mod(t, comboDelay) = 0) {
-			activateSkills(comboDPS[comboIndex])
-			comboIndex := comboIndex < comboDPS.MaxIndex() ? comboIndex+1 : 2
+			activateSkills(deepRunCombo[comboIndex])
+			comboIndex := comboIndex < deepRunCombo.MaxIndex() ? comboIndex+1 : 2
 		}
 		if (mod(t, lvlUpDelay) = 0) {
 			ctrlClick(xLvl, y, 1, 0)
@@ -522,7 +652,7 @@ lvlUp(seconds, buyUpgrades, button, stint, stints) {
 		if (exitThread) {
 			stopProgress()
 			stopMouseMonitoring()
-			showSplash("Speed run aborted!")
+			showSplashAlways("Speed run aborted!")
 			exit
 		}
 		if (mod(t, lvlUpDelay) = 0) {
@@ -543,14 +673,14 @@ ascend(autoYes:=false) {
 	local y := yAsc - extraClicks * buttonSize
 
 	if (autoYes) {
-		showSplash(autoAscendDelay . " seconds till ASCENSION! (Abort with Alt+Pause)", autoAscendDelay, 2)
+		showWarningSplash(autoAscendDelay . " seconds till ASCENSION! (Abort with Alt+Pause)", autoAscendDelay)
 		if (exitThread) {
-			showSplash("Ascension aborted!")
+			showSplashAlways("Ascension aborted!")
 			exit
 		}
 	} else {
 		playWarningSound()
-		msgbox, 4,% scriptName " v" scriptVersion,Salvage Junk Pile & Ascend?
+		msgbox, 4,% script,Salvage Junk Pile & Ascend?
 		ifmsgbox no
 			exit
 	}
@@ -558,7 +688,6 @@ ascend(autoYes:=false) {
 	salvageJunkPile() ; must salvage junk relics before ascending
 
 	switchToCombatTab()
-
 	scrollDown(ascDownClicks)
 	sleep % zzz * 2
 
@@ -577,39 +706,15 @@ salvageJunkPile() {
 	global
 
 	switchToRelicTab()
-	screenShot()
+	if (autoAscend && screenShotRelics) {
+		clickPos(xRelic, yRelic) ; focus
+		screenShot()
+		clickPos(xRelic+100, yRelic) ; remove focus
+	}
 	clickPos(xSalvageJunk, ySalvageJunk)
 	sleep % zzz * 4
 	clickPos(xDestroyYes, yDestroyYes)
 	sleep % zzz * 2
-}
-
-screenShot() {
-	global
-
-	if (autoAscend && screenShotRelics) {
-		IfWinExist, % winName
-		{
-			WinActivate
-			clickPos(xRelic, yRelic) ; focus
-			sleep % zzz
-			send {blind}{f12} ; Steam screenshot
-			sleep % zzz
-			clickPos(xRelic+100, yRelic) ; remove focus
-		}
-	}
-}
-
-switchToRelicTab() {
-	global
-	clickPos(xRelicTab, yRelicTab)
-	sleep % zzz * 2
-}
-
-switchToCombatTab() {
-	global
-	clickPos(xCombatTab, yCombatTab)
-	sleep % zzz * 4
 }
 
 buyAvailableUpgrades() {
@@ -618,36 +723,12 @@ buyAvailableUpgrades() {
 	sleep % zzz * 3
 }
 
-scrollUp(clickCount:=1) {
-	global
-	clickPos(xScroll, yUp, clickCount)
-	sleep % zzz * 2
-}
-
-scrollDown(clickCount:=1) {
-	global
-	clickPos(xScroll, yDown, clickCount)
-	sleep % zzz * 2
-}
-
 ; Scroll down fix when at bottom and scroll bar don't update correctly
 scrollWayDown(clickCount:=1) {
 	global
 	scrollUp()
 	scrollDown(clickCount + 1)
 	sleep % nextHeroDelay * 1000
-}
-
-scrollToTop() {
-	global
-	scrollUp(top2BottomClicks)
-	sleep % 1000
-}
-
-scrollToBottom() {
-	global
-	scrollDown(top2BottomClicks)
-	sleep % 1000
 }
 
 regild(ranger, gildCount) {
@@ -668,28 +749,11 @@ regild(ranger, gildCount) {
 	sleep % zzz * 2
 }
 
-maxClick(xCoord, yCoord) {
-	global
-	ControlSend,, {shift down}{q down}, % winName
-	clickPos(xCoord, yCoord, clickCount)
-	ControlSend,, {q up}{shift up}, % winName
-	sleep % zzz
-}
-
-ctrlClick(xCoord, yCoord, clickCount:=1, sleepSome:=1) {
-	global
-	ControlSend,, {ctrl down}, % winName
-	clickPos(xCoord, yCoord, clickCount)
-	ControlSend,, {ctrl up}, % winName
-	if (sleepSome) {
-		sleep % zzz
-	}
-}
-
 ; Toggle between farm and progression modes
 toggleMode() {
 	global
 	ControlSend,, {a down}{a up}, % winName
+	sleep % zzz
 }
 
 activateSkills(skills) {
@@ -728,7 +792,7 @@ checkMousePosition:
 
 		if (x > xL && x < xR && y > yT && y < yB) {
 			playNotificationSound()
-			msgbox,,% scriptName " v" scriptVersion,Click safety pause engaged. Continue?
+			msgbox,,% script,Click safety pause engaged. Continue?
 		}
 	}
 return

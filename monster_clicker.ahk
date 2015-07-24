@@ -23,7 +23,9 @@ SetBatchLines, -1
 
 scriptName=Monster Clicker
 scriptVersion=1.2
-minLibVersion=1.1
+minLibVersion=1.2
+
+script := scriptName . " v" . scriptVersion
 
 ; -----------------------------------------------------------------------------------------
 ; -- Configuration
@@ -34,14 +36,14 @@ clickDuration := 0 ; minutes (set to zero for manual/remote operation)
 ; -- Look & Feel --------------------------------------------------------------------------
 
 global showSplashTexts := true
+global playNotificationSounds := clickDuration > 0 ? true : false ; no sound when operated remotely
+global playWarningSounds := true
 
 ; Splash text window position
 xSplash := A_ScreenWidth // 2 - wSplash // 2 ; centered
 ySplash := A_ScreenHeight // 2 + 75
 
 ; -----------------------------------------------------------------------------------------
-
-global playSounds := clickDuration > 0 ? true : false ; no sound when operated remotely
 
 short := 21 ; ms
 long := 2000 ; throttled delay
@@ -50,8 +52,8 @@ clickDelay := short
 
 ; -----------------------------------------------------------------------------------------
 
-if (libVersion < minLibVersion) {
-	showSplash("The bot lib version must be " . minLibVersion . " or higher!",5,2)
+if (libVersion != minLibVersion) {
+	showWarningSplash("The bot lib version must be " . minLibVersion . "!")
 	ExitApp
 }
 
@@ -91,7 +93,7 @@ return
 +F2::
 	critical
 	if (keepOnClicking) {
-		msgbox,,% scriptName " v" scriptVersion,Click safety pause engaged. Continue?
+		msgbox,,% script,Click safety pause engaged. Continue?
 	}
 return
 
@@ -102,7 +104,7 @@ return
 
 ; Reload script with Shift+F5
 +F5::
-	showSplash("Reloading clicker...", 1)
+	showSplashAlways("Reloading clicker...", 1)
 	Reload
 return
 
