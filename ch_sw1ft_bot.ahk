@@ -192,7 +192,7 @@ screenShotRelics := true
 deepRunTime := 60 ; minutes
 
 clickableHuntDelay := 15 ; hunt for a clickable every 15s
-stopHuntirisThreshold := 30 ; stop hunt when this many minutes remain of a deep run
+stopHuntThreshold := 30 ; stop hunt when this many minutes remain of a deep run
 
 ; Number of gilds to move over at a time
 reGildCount := 100 ; don't set this higher than 100 if you plan on moving gilds during a deep run
@@ -582,7 +582,7 @@ deepRun() {
 
 	local comboDelay := deepRunCombo[1]
 	local comboIndex := 2
-	local stopHuntIndex := drDuration - stopHuntirisThreshold * 60
+	local stopHuntIndex := drDuration - stopHuntThreshold * 60
 	local t := 0
 
 	loop % drDuration
